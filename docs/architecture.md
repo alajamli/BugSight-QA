@@ -38,8 +38,8 @@ React dashboard (Vite)  --/api-->  Flask API (Gunicorn)  -->  YOLOv8 model (in m
 | `src/api/app.py` | App factory, routes, validation, rate limiting, model state. |
 | `src/api/models.py` | `User` and `Prediction` models, small forward-only migration, first-admin seeding. |
 | `src/api/report_generator.py` | PDF report (French and English text tables). |
-| `src/model/` | Training and evaluation helpers. |
-| `src/data_generation/` | Synthetic scene generator for the training dataset. |
+| `src/model/` | Training config, evaluation, and `report.py` (per-class table: recall, missed rate, confusions, hints). |
+| `src/data_generation/` | Scene generator for the six classes; each defect is rendered visibly and verified against the clean scene. |
 
 Security notes: JWT secret is mandatory in production, no default admin password,
 login/register are rate limited, uploads are capped and extension-checked,

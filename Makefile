@@ -23,14 +23,14 @@ install:  ## Create venv and install dependencies
 	$(PIP) install -r requirements.txt
 	cd frontend && npm ci
 
-data:  ## Generate the synthetic dataset (2000 images)
-	$(PYTHON) scripts/generate_dataset.py --n-images 2000 --output data/processed
+data:  ## Generate the six-class synthetic dataset (1500 images) in data/processed_v2
+	$(PYTHON) scripts/generate_dataset.py --n-images 1500 --output data/processed_v2
 
 train:  ## Train the YOLOv8 model
 	$(PYTHON) scripts/train.py --config configs/train.yaml
 
-evaluate:  ## Evaluate the model on the test split
-	$(PYTHON) scripts/train.py --config configs/train.yaml --evaluate-only
+evaluate:  ## Per-class evaluation of the newest weights (test split)
+	$(PYTHON) scripts/evaluate.py
 
 serve:  ## Start the Flask API (development)
 	$(PYTHON) scripts/serve.py --debug

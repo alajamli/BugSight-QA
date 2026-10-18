@@ -10,6 +10,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from src.model.evaluate import evaluate_model  # noqa: E402
+from src.model.report import format_report, save_report  # noqa: E402
 from src.model.trainer import _find_best_weights, load_config  # noqa: E402
 
 
@@ -46,8 +47,14 @@ def main() -> None:
         weights_path = _find_best_weights(cfg)
 
     print("[train] Running evaluation on test split...")
-    metrics = evaluate_model(weights_path, cfg.data_yaml, device=cfg.device)
+    metrics = evaluate_model(weights_path, cfg.data_yaml, device=cfg.device, imgsz=cfg.imgsz)
     print(json.dumps(metrics.to_dict(), indent=2))
+    print(format_report(metrics.per_class, metrics.overall(), split="test", weights=weights_path))
+    run_name = Path(weights_path).parent.parent.name
+    md_path, _ = save_report(
+        metrics.per_class, metrics.overall(), "runs/reports", run_name, weights=weights_path
+    )
+    print(f"[train] Per-class report saved to {md_path}")
 
 
 if __name__ == "__main__":

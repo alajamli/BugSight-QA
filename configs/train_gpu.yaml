@@ -1,0 +1,57 @@
+# BugSight QA - YOLOv8 training configuration for a CUDA GPU
+# (a free Colab / Kaggle T4 trains this in roughly 10-20 minutes).
+#
+# Same data and augmentation reasoning as configs/train.yaml, with a bigger
+# model, full resolution and more epochs.
+
+model:
+  weights: yolov8s.pt
+  task: detect
+
+data:
+  yaml: data/processed_v2/data.yaml
+
+train:
+  epochs: 100
+  imgsz: 640
+  batch: 32
+  patience: 25
+  optimizer: AdamW
+  lr0: 0.002
+  lrf: 0.02
+  momentum: 0.937
+  weight_decay: 0.0005
+  warmup_epochs: 3
+  warmup_momentum: 0.8
+  box: 7.5
+  cls: 0.7
+  dfl: 1.5
+
+augment:
+  hsv_h: 0.0
+  hsv_s: 0.3
+  hsv_v: 0.3
+  degrees: 0.0
+  translate: 0.1
+  scale: 0.3
+  fliplr: 0.5
+  mosaic: 1.0
+  mixup: 0.0
+
+extra:
+  cos_lr: true
+  close_mosaic: 15
+  flipud: 0.0
+  erasing: 0.0
+  amp: true
+  cache: ram
+  plots: true
+
+output:
+  project: runs
+  name: bugsight_yolov8s_gpu
+  exist_ok: false
+
+device: "0"
+workers: 8
+seed: 42

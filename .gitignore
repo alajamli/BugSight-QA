@@ -59,3 +59,4 @@ frontend/dist/
 frontend/node_modules/
 bugsight.db
 data/real_dataset/
+data/processed_*/

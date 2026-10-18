@@ -33,7 +33,7 @@ pip install -r requirements.txt
 cp .env.example .env        # then edit it (see Configuration)
 
 # Dataset + model (skip if you already have weights)
-python scripts/generate_dataset.py --n-images 2000
+python scripts/generate_dataset.py          # -> data/processed_v2 (1500 images)
 python scripts/train.py --config configs/train.yaml
 
 # API on http://localhost:5000
@@ -52,6 +52,29 @@ On a brand-new database an admin account is created automatically. Set
 `BUGSIGHT_ADMIN_EMAIL` / `BUGSIGHT_ADMIN_PASSWORD` to choose it; if the password is
 empty a random one is generated and **printed once in the API log**. There is no
 default password. Other users can register from the login page.
+
+## Training and evaluating the model
+
+```bash
+python scripts/generate_dataset.py                  # six classes, ~250 boxes each, in data/processed_v2
+python scripts/train.py --config configs/train.yaml      # CPU (estimated 2-3 h)
+python scripts/train.py --config configs/train_gpu.yaml  # CUDA GPU / Colab T4 (estimated 10-20 min)
+python scripts/evaluate.py                          # per-class report for the newest weights
+```
+
+- **Why a new dataset generator:** every defect is drawn visibly inside its box and
+  checked against the clean scene. The previous data labelled `screen_tear` and
+  `uv_stretch` over regions that looked identical to the background, which capped
+  their recall at 10-25%.
+- **Per-class report:** `scripts/evaluate.py` (also run at the end of `train.py`)
+  prints and saves `runs/reports/<run>_<split>.md/.json` with precision, recall,
+  AP, how often each class is *missed* (seen as background), what it is confused
+  with and where to improve. Read it before the global mAP, which hides weak classes.
+- **Using a new model:** the API loads the newest `bugsight_yolov8n_v2` weights if
+  they exist, otherwise set `BUGSIGHT_WEIGHTS`. `/api/metrics` reads the
+  `results.csv` next to the loaded weights.
+- Colour augmentation (`hsv_h`) and mixup/erasing are off on purpose: colour is the
+  signal for `color_corruption`, and blending or erasing paints fake defects.
 
 ## Configuration
 

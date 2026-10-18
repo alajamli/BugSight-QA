@@ -1,60 +1,65 @@
-# BugSight QA - YOLOv8 training configuration
+# BugSight QA - YOLOv8 training configuration (CPU-friendly default)
 #
-# Tuned for a very small dataset (~200 train images, ~330 labelled boxes):
-# the model is data-starved, so the goal is to regularise, not to add capacity.
+# Dataset: data/processed_v2 (python scripts/generate_dataset.py), ~1050 train
+# images and ~250 boxes per class, with every defect visibly rendered.
+#
+# Choices that matter for the six bug classes:
+#   * colour augmentation is nearly off (hsv_h 0): colour IS the signal for
+#     color_corruption / missing_texture, so hue-shifting would corrupt labels
+#   * mixup and random erasing are off: they blend or paint fake defects
+#   * the backbone is NOT frozen: the synthetic domain is far from COCO
+#   * imgsz 512 instead of 640: ~1.5x faster on CPU, defects are >= 44 px
+# On a GPU (e.g. Colab) use configs/train_gpu.yaml instead.
 
 model:
   weights: yolov8n.pt
   task: detect
 
 data:
-  yaml: data/processed/data.yaml
+  yaml: data/processed_v2/data.yaml
 
 train:
-  epochs: 150            # small data converges slowly; patience stops it early
-  imgsz: 640
+  epochs: 40
+  imgsz: 512
   batch: 16
-  patience: 40
-  optimizer: AdamW       # more stable than SGD on tiny datasets
-  lr0: 0.001
-  lrf: 0.01
+  patience: 15
+  optimizer: AdamW
+  lr0: 0.002
+  lrf: 0.02
   momentum: 0.937
-  weight_decay: 0.001    # 2x stronger L2 to curb memorisation
-  warmup_epochs: 3
+  weight_decay: 0.0005
+  warmup_epochs: 2
   warmup_momentum: 0.8
   box: 7.5
-  cls: 0.5
+  cls: 0.7              # slightly higher: the six classes are easy to confuse early on
   dfl: 1.5
 
 augment:
-  hsv_h: 0.015
-  hsv_s: 0.7
-  hsv_v: 0.4
-  degrees: 0.0           # rotating distorts screen_tear / z_fighting patterns
+  hsv_h: 0.0            # never shift hue (see above)
+  hsv_s: 0.3
+  hsv_v: 0.3
+  degrees: 0.0
   translate: 0.1
-  scale: 0.5
+  scale: 0.3
   fliplr: 0.5
   mosaic: 1.0
-  mixup: 0.1
+  mixup: 0.0
 
-# Extra Ultralytics arguments, passed through as-is.
 extra:
-  cos_lr: true           # cosine LR decay -> smoother, less noisy final epochs
-  close_mosaic: 15       # last epochs on clean images to stabilise precision
-  freeze: 10             # keep the COCO-pretrained backbone, train neck+head
-  dropout: 0.0
-  erasing: 0.3           # random erasing as extra regularisation
+  cos_lr: true
+  close_mosaic: 8       # last epochs on un-mosaicked images
   flipud: 0.0
-  amp: true
-  cache: true            # whole dataset fits in RAM; speeds up epochs
+  erasing: 0.0
+  cache: ram            # ~40 MB of images: speeds up every epoch after the first
   plots: true
 
 output:
   project: runs
-  name: bugsight_yolov8n_v2   # new name so the v1 baseline is kept for comparison
+  name: bugsight_yolov8n_v2
   exist_ok: false
 
-# "0" = first GPU, "cpu" = CPU. Overridable with --device.
-device: "0"
-workers: 4
+# "cpu" works everywhere; use "0" (first GPU) only with a CUDA build of PyTorch.
+# Overridable with --device.
+device: "cpu"
+workers: 2
 seed: 42
