@@ -1,9 +1,10 @@
 import { lazy, Suspense, useState, useEffect, useCallback } from 'react';
-import { Bug, Activity, LogOut, FileDown, ShieldCheck } from 'lucide-react';
+import { Bug, Activity, FileDown } from 'lucide-react';
 import { api } from './api';
 import LoginPage from './components/LoginPage';
-import UploadPanel from './components/UploadPanel';
-import VideoAnalysis from './components/VideoAnalysis';
+import AnalyzePanel from './components/AnalyzePanel';
+import KpiStrip from './components/KpiStrip';
+import UserMenu from './components/UserMenu';
 import ResultViewer from './components/ResultViewer';
 import HistoryTable from './components/HistoryTable';
 import ThemeToggle from './components/ThemeToggle';
@@ -164,78 +165,64 @@ export default function App() {
       </div>
 
       <div className="bs-root bs-grid-bg relative z-[1] min-h-screen">
-        <header className="bg-white/90 dark:bg-[#0D1219]/90 border-b border-[#DCE6E8] dark:border-[#1E2733] header-glow top-0 z-10 backdrop-blur-xl transition-colors">
-          <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="bs-reticle w-11 h-11 rounded-md bg-[#F4F7F7] dark:bg-[#111826] border border-[#DCE6E8] dark:border-[#243040] flex items-center justify-center overflow-hidden">
+        <header className="bg-white/90 dark:bg-[#0D1219]/90 border-b border-[#DCE6E8] dark:border-[#1E2733] header-glow top-0 z-20 backdrop-blur-xl transition-colors">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="bs-reticle w-10 h-10 rounded-md bg-[#F4F7F7] dark:bg-[#111826] border border-[#DCE6E8] dark:border-[#243040] flex items-center justify-center overflow-hidden">
                 <div className="bs-scan" />
                 <Bug className="w-5 h-5 text-[#0D9488] dark:text-[#5EEAD4]" />
               </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="bs-mono text-base font-semibold text-[#0F1B24] dark:text-white tracking-wide uppercase">
-                    <span className="brand-gradient">BugSight QA</span>
-                  </h1>
-                  <span className="relative flex h-1.5 w-1.5">
-                    <span className="bs-pulse-dot absolute inline-flex h-1.5 w-1.5 rounded-full bg-[#0D9488] dark:bg-[#5EEAD4]" />
-                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#0D9488] dark:bg-[#5EEAD4]" />
-                  </span>
-                </div>
-                <p className="bs-mono text-[11px] text-[#5B6B74] dark:text-gray-500 tracking-wide">
-                  {t('app.welcome')}, <span className="text-[#0F1B24] dark:text-gray-400">{user.name}</span>
-                </p>
+              <div className="hidden items-center gap-2 min-[480px]:flex">
+                <h1 className="bs-mono whitespace-nowrap text-base font-semibold text-[#0F1B24] dark:text-white tracking-wide uppercase">
+                  <span className="brand-gradient">BugSight QA</span>
+                </h1>
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="bs-pulse-dot absolute inline-flex h-1.5 w-1.5 rounded-full bg-[#0D9488] dark:bg-[#5EEAD4]" />
+                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#0D9488] dark:bg-[#5EEAD4]" />
+                </span>
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => user.role === 'admin' && setAdminMode(true)}
-                disabled={user.role !== 'admin'}
-                title={user.role === 'admin' ? t('app.adminOpen') : t('app.adminOnly')}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 border border-[#DCE6E8] dark:border-[#243040] rounded-md text-sm font-semibold text-[#0D9488] dark:text-[#5EEAD4] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              >
-                <ShieldCheck className="w-4 h-4" /> {t('app.admin')}
-              </button>
+            <div className="flex items-center gap-1.5 sm:gap-3">
               <button
                 onClick={handleDownloadReport}
                 disabled={reportLoading}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#0D9488] hover:bg-[#0F766E] dark:bg-[#5EEAD4] dark:hover:bg-[#7FF3E0] disabled:bg-gray-200 dark:disabled:bg-[#1E2733] disabled:text-gray-400 dark:disabled:text-gray-500 text-white dark:text-[#0A0E14] rounded-md text-sm font-semibold transition-colors"
+                className="btn-primary btn-primary--auto !rounded-lg !px-3.5 !py-2"
               >
                 {reportLoading ? (
                   <span className="bs-mono">{t('app.generating')}</span>
                 ) : (
                   <>
-                    <FileDown className="w-4 h-4" /> {t('app.reportPdf')}
+                    <FileDown className="w-4 h-4" /> <span className="hidden sm:inline">{t('app.reportPdf')}</span>
                   </>
                 )}
               </button>
-              <span className="bs-mono text-xs text-[#5B6B74] dark:text-gray-500 hidden md:block border-l border-[#DCE6E8] dark:border-[#243040] pl-3">
-                {user.email}
-              </span>
               <LanguageToggle />
               <ThemeToggle />
-              <button
-                onClick={handleLogout}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-transparent hover:bg-[#F4F7F7] dark:hover:bg-[#161D28] border border-[#DCE6E8] dark:border-[#243040] text-[#5B6B74] dark:text-gray-400 hover:text-[#0F1B24] dark:hover:text-gray-200 rounded-md text-sm font-medium transition-colors"
-              >
-                <LogOut className="w-4 h-4" /> {t('app.logout')}
-              </button>
+              <UserMenu user={user} onAdmin={() => setAdminMode(true)} onLogout={handleLogout} />
             </div>
           </div>
         </header>
 
-        <main className="max-w-7xl mx-auto px-6 py-8">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="space-y-6">
-              <UploadPanel onPredict={handlePredict} loading={loading} />
-              <VideoAnalysis onVideoReport={handleVideoReport} hideResult />
-              <Suspense fallback={<PanelFallback />}>
-                <StatsPanel stats={stats} />
-              </Suspense>
-              <HistoryTable refreshKey={historyKey} onChanged={refreshStats} />
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+          <div className="page-head mb-6">
+            <p className="eyebrow">{t('stats.title')}</p>
+            <h2 className="mt-1 text-2xl font-bold text-[#0F1B24] dark:text-white sm:text-3xl">
+              {t('app.hello', { name: user.name })}
+            </h2>
+            <p className="mt-1 max-w-2xl text-sm text-[#5B6B74] dark:text-gray-400">{t('app.overviewSub')}</p>
+          </div>
+
+          <KpiStrip stats={stats} metrics={metrics} />
+
+          <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-12">
+            <div className="lg:col-span-4">
+              <div className="lg:sticky lg:top-24">
+                <AnalyzePanel onPredict={handlePredict} loading={loading} onVideoReport={handleVideoReport} />
+              </div>
             </div>
 
-            <div className="lg:col-span-2 space-y-6">
+            <div className="space-y-6 lg:col-span-8">
               {(result || loading || !videoResult) && (
                 <ResultViewer result={result} imageUrl={imageUrl} loading={loading} />
               )}
@@ -243,10 +230,15 @@ export default function App() {
             </div>
           </div>
 
-          <div className="mt-6">
-            <Suspense fallback={<PanelFallback height="h-56" />}>
+          <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+            <Suspense fallback={<PanelFallback height="h-64" />}>
+              <StatsPanel stats={stats} />
               <MetricsPanel metrics={metrics} />
             </Suspense>
+          </div>
+
+          <div className="mt-6">
+            <HistoryTable refreshKey={historyKey} onChanged={refreshStats} />
           </div>
 
           <footer className="mt-12 pt-6 border-t border-[#DCE6E8] dark:border-[#1A222D] text-center">

@@ -167,6 +167,45 @@ export default {
   'history.loadFailed': 'Could not load the history.',
 
   'metrics.title': 'Model Quality',
+  'metrics.precisionHint': 'Share of detections that are real defects',
+  'metrics.recallHint': 'Share of real defects that get found',
+  'metrics.map50Hint': 'Average precision at IoU 0.5',
+  'metrics.map5095Hint': 'Average precision over IoU 0.5 to 0.95',
+
+  'app.hello': 'Welcome back, {name}',
+  'app.overviewSub': 'Detect rendering defects in your captures and track game quality over time.',
+  'app.account': 'Account',
+
+  'kpi.total': 'Analyses',
+  'kpi.totalHint': 'screenshots and videos',
+  'kpi.bugs': 'With bugs',
+  'kpi.bugsHint': '{pct}% of all analyses',
+  'kpi.clean': 'Clean',
+  'kpi.cleanHint': '{pct}% of all analyses',
+  'kpi.rate': 'Bug rate',
+  'kpi.rateHint': 'Analyses where a defect was found',
+  'kpi.model': 'Model mAP50',
+  'kpi.modelHint': 'Accuracy on the validation set',
+
+  'analyze.title': 'New analysis',
+  'analyze.tabs': 'Analysis type',
+  'analyze.tabImage': 'Screenshot',
+  'analyze.tabVideo': 'Video',
+
+  'conf.sensitive': 'Sensitive',
+  'conf.balanced': 'Balanced',
+  'conf.strict': 'Strict',
+  'conf.hint': 'Lower values catch more defects but may add false positives.',
+
+  'upload.remove': 'Remove file',
+  'upload.ready': 'Ready to analyze',
+
+  'stats.distribution': 'Verdict split',
+  'stats.analysesLabel': 'analyses',
+  'stats.classesTitle': 'Bugs by class',
+  'stats.noClassData': 'No bug class recorded yet',
+
+  'history.reset': 'Reset filters',
 
   'admin.loading': 'Loading the admin center…',
   'admin.unavailable': 'Data unavailable.',

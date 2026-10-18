@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  History, AlertTriangle, CheckCircle, Image as ImageIcon, Video, Search, Trash2, Loader2,
+  History, AlertTriangle, CheckCircle, Image as ImageIcon, Video, Search, Trash2, Loader2, X,
 } from 'lucide-react';
 import { api } from '../api';
 import { useI18n } from '../i18n';
@@ -93,39 +93,56 @@ export default function HistoryTable({ refreshKey = 0, onChanged }) {
     </h2>
   );
 
+  const resetFilters = () => {
+    setSearch('');
+    setStatus('');
+    setType('');
+  };
+
+  const segment = (label, current, setCurrent, options) => (
+    <div className="seg" role="group" aria-label={label}>
+      {options.map(([value, text]) => (
+        <button
+          key={value || 'all'}
+          type="button"
+          className="seg__btn"
+          aria-pressed={current === value}
+          onClick={() => setCurrent(value)}
+        >
+          {text}
+        </button>
+      ))}
+    </div>
+  );
+
   const filters = (
-    <div className="mb-3 flex flex-wrap gap-2">
-      <label className="relative min-w-[8rem] flex-1">
+    <div className="mb-4 flex flex-wrap items-center gap-3">
+      <label className="relative min-w-[12rem] flex-1">
         <span className="sr-only">{t('history.search')}</span>
-        <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 opacity-50" />
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50" />
         <input
           type="search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder={t('history.searchPh')}
-          className="field w-full pl-7"
+          className="field w-full !pl-9"
         />
       </label>
-      <select
-        className="field"
-        value={status}
-        onChange={(e) => setStatus(e.target.value)}
-        aria-label={t('history.filterStatus')}
-      >
-        <option value="">{t('history.allStatus')}</option>
-        <option value="bug">{t('history.onlyBugs')}</option>
-        <option value="clean">{t('history.onlyClean')}</option>
-      </select>
-      <select
-        className="field"
-        value={type}
-        onChange={(e) => setType(e.target.value)}
-        aria-label={t('history.filterType')}
-      >
-        <option value="">{t('history.allTypes')}</option>
-        <option value="image">{t('history.onlyImages')}</option>
-        <option value="video">{t('history.onlyVideos')}</option>
-      </select>
+      {segment(t('history.filterStatus'), status, setStatus, [
+        ['', t('history.allStatus')],
+        ['bug', t('history.onlyBugs')],
+        ['clean', t('history.onlyClean')],
+      ])}
+      {segment(t('history.filterType'), type, setType, [
+        ['', t('history.allTypes')],
+        ['image', t('history.onlyImages')],
+        ['video', t('history.onlyVideos')],
+      ])}
+      {filtered && (
+        <button type="button" className="btn-ghost" onClick={resetFilters}>
+          <X className="h-3.5 w-3.5" /> {t('history.reset')}
+        </button>
+      )}
     </div>
   );
 
@@ -158,62 +175,61 @@ export default function HistoryTable({ refreshKey = 0, onChanged }) {
     <div className="panel panel-enter">
       {header}
       {filters}
-      <div className={`overflow-x-auto max-h-96 overflow-y-auto -mx-2 px-2 transition-opacity ${loading ? 'opacity-60' : ''}`}>
-        <table className="w-full text-sm">
-          <thead className="sticky top-0 bg-white/95 dark:bg-[#0D1219]/95 backdrop-blur">
-            <tr className="border-b border-[#DCE6E8] dark:border-[#1E2733] text-left">
-              {['history.time', 'history.type', 'history.file', 'history.status', 'history.det'].map((h) => (
-                <th key={h} className={`pb-2 tile-label font-medium ${h === 'history.det' ? 'text-right' : ''}`}>{t(h)}</th>
-              ))}
-              <th className="pb-2"><span className="sr-only">{t('history.actions')}</span></th>
+      <div className={`max-h-[26rem] overflow-auto rounded-xl border border-[#E3EBED] transition-opacity dark:border-[#1E2733] ${loading ? 'opacity-60' : ''}`}>
+        <table className="tbl">
+          <thead>
+            <tr>
+              <th>{t('history.time')}</th>
+              <th>{t('history.type')}</th>
+              <th>{t('history.file')}</th>
+              <th>{t('history.status')}</th>
+              <th className="num">{t('history.det')}</th>
+              <th><span className="sr-only">{t('history.actions')}</span></th>
             </tr>
           </thead>
           <tbody>
             {items.map((h) => {
               const isVideo = h.media_type === 'video';
               return (
-                <tr key={h.id} className="border-b border-[#EEF3F4] dark:border-[#161D28] hover:bg-teal-500/5 dark:hover:bg-teal-300/5 transition-colors">
-                  <td className="py-2.5 pr-2 text-[#5B6B74] dark:text-gray-400 text-xs bs-mono whitespace-nowrap">
-                    {formatShort(h.timestamp)}
-                  </td>
-                  <td className="py-2.5">
+                <tr key={h.id}>
+                  <td className="bs-mono whitespace-nowrap text-xs text-[#5B6B74] dark:text-gray-400">{formatShort(h.timestamp)}</td>
+                  <td>
                     <span
-                      className="grid h-6 w-6 place-items-center rounded-md bg-[#F4F7F7] text-[#5B6B74] dark:bg-[#111826] dark:text-gray-400"
+                      className="inline-flex items-center gap-1.5 text-xs text-[#5B6B74] dark:text-gray-400"
                       title={isVideo ? t('history.typeVideo') : t('history.typeImage')}
                     >
-                      {isVideo ? <Video className="w-3.5 h-3.5" /> : <ImageIcon className="w-3.5 h-3.5" />}
+                      <span className="grid h-6 w-6 place-items-center rounded-md bg-[#F4F7F7] dark:bg-[#111826]">
+                        {isVideo ? <Video className="h-3.5 w-3.5" /> : <ImageIcon className="h-3.5 w-3.5" />}
+                      </span>
+                      <span className="hidden sm:inline">{isVideo ? t('analyze.tabVideo') : t('analyze.tabImage')}</span>
                     </span>
                   </td>
-                  <td className="py-2.5 bs-mono text-xs text-[#0F1B24] dark:text-gray-300 truncate max-w-32" title={h.filename}>
-                    {h.filename}
-                  </td>
-                  <td className="py-2.5">
+                  <td className="bs-mono max-w-[16rem] truncate text-xs" title={h.filename}>{h.filename}</td>
+                  <td>
                     {h.has_bug ? (
                       <span className="badge badge-bug">
-                        <AlertTriangle className="w-3 h-3" />
+                        <AlertTriangle className="h-3 w-3" />
                         {isVideo ? t('history.frames', { n: h.video_summary?.buggy_frames ?? '?' }) : t('history.bug')}
                       </span>
                     ) : (
                       <span className="badge badge-ok">
-                        <CheckCircle className="w-3 h-3" /> {t('history.clean')}
+                        <CheckCircle className="h-3 w-3" /> {t('history.clean')}
                       </span>
                     )}
                   </td>
-                  <td className="py-2.5 text-right bs-mono text-[#0F1B24] dark:text-gray-300">
-                    {h.num_detections}
-                  </td>
-                  <td className="py-2.5 pl-2 text-right">
+                  <td className="num bs-mono">{h.num_detections}</td>
+                  <td className="num">
                     <button
                       type="button"
                       onClick={() => handleDelete(h)}
                       disabled={deletingId === h.id}
                       title={t('history.delete')}
                       aria-label={`${t('history.delete')}: ${h.filename}`}
-                      className="rounded p-1 text-[#5B6B74] transition-colors hover:bg-red-500/10 hover:text-red-500 disabled:opacity-40 dark:text-gray-500"
+                      className="icon-btn ml-auto"
                     >
                       {deletingId === h.id
-                        ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        : <Trash2 className="w-3.5 h-3.5" />}
+                        ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        : <Trash2 className="h-3.5 w-3.5" />}
                     </button>
                   </td>
                 </tr>

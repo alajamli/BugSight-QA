@@ -1,11 +1,13 @@
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { BarChart3, TrendingUp } from 'lucide-react';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import { BarChart3, PieChart as PieIcon } from 'lucide-react';
 import { useTheme } from '../ThemeContext';
-import CountUp from './CountUp';
 import { useI18n } from '../i18n';
+import { CLASS_COLORS, classColor } from '../classColors';
 
-const CLASS_COLORS = ['#F87171', '#FBBF24', '#A78BFA', '#60A5FA', '#34D399', '#F472B6'];
+const BUG = '#F87171';
+const CLEAN = '#34D399';
 
+/** Two cards: verdict split (donut) and bugs by class (bars coloured like the detection overlay). */
 export default function StatsPanel({ stats }) {
   const { theme } = useTheme();
   const { t, tClass } = useI18n();
@@ -17,115 +19,96 @@ export default function StatsPanel({ stats }) {
     color: isDark ? '#e5e7eb' : '#0F1B24',
     fontSize: '12px',
   };
-  const gridStroke = isDark ? '#1E2733' : '#E3EBED';
-  const axisStroke = isDark ? '#6b7280' : '#5B6B74';
 
-  const header = (
-    <h2 className="panel-title">
-      <span className="panel-icon"><BarChart3 className="w-4 h-4" /></span> {t('stats.title')}
-    </h2>
-  );
-
-  if (!stats || stats.total_analyses === 0) {
-    return (
-      <div className="panel panel-enter">
-        {header}
-        <div className="empty-state">
-          <BarChart3 className="w-8 h-8 opacity-40" />
-          {t('stats.empty')}
-        </div>
-      </div>
-    );
-  }
+  const hasData = stats && stats.total_analyses > 0;
+  const total = stats?.total_analyses ?? 0;
 
   const pieData = [
-    { name: t('stats.pieBug'), value: stats.bug_detected, color: '#F87171' },
-    { name: t('stats.pieClean'), value: stats.clean, color: '#34D399' },
+    { name: t('stats.pieBug'), value: stats?.bug_detected ?? 0, color: BUG },
+    { name: t('stats.pieClean'), value: stats?.clean ?? 0, color: CLEAN },
   ];
 
-  const classData = stats.class_distribution
-    ? Object.entries(stats.class_distribution)
-        .filter(([, v]) => v > 0)
-        .map(([name, value]) => ({ name: tClass(name), value }))
-    : [];
+  // Every known class is listed (zeros included) so the ranking stays stable between sessions.
+  const known = Object.keys(CLASS_COLORS);
+  const distribution = stats?.class_distribution || {};
+  const classes = [...new Set([...known, ...Object.keys(distribution)])]
+    .map((name) => ({ name, value: distribution[name] || 0 }))
+    .sort((a, b) => b.value - a.value);
+  const maxCount = Math.max(1, ...classes.map((c) => c.value));
+  const anyClass = classes.some((c) => c.value > 0);
+
+  const empty = (
+    <div className="empty-state">
+      <BarChart3 className="h-8 w-8 opacity-40" />
+      {t('stats.empty')}
+    </div>
+  );
 
   return (
-    <div className="panel panel-enter">
-      {header}
-
-      <div className="grid grid-cols-3 gap-2.5 mb-4">
-        <div className="tile text-center">
-          <p className="text-2xl font-bold text-[#0F1B24] dark:text-white"><CountUp value={stats.total_analyses} /></p>
-          <p className="tile-label">{t('stats.total')}</p>
-        </div>
-        <div className="tile text-center">
-          <p className="text-2xl font-bold text-red-500 dark:text-red-400"><CountUp value={stats.bug_detected} /></p>
-          <p className="tile-label">{t('stats.bugs')}</p>
-        </div>
-        <div className="tile text-center">
-          <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400"><CountUp value={stats.clean} /></p>
-          <p className="tile-label">{t('stats.clean')}</p>
-        </div>
-      </div>
-
-      <div className="relative mb-5 overflow-hidden rounded-xl border border-red-200/70 bg-gradient-to-br from-red-50 to-white p-4 dark:border-red-500/20 dark:from-red-500/10 dark:to-transparent">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="tile-label">{t('stats.rate')}</p>
-            <p className="mt-1 text-3xl font-bold text-red-500 dark:text-red-400">
-              <CountUp value={stats.bug_rate * 100} decimals={1} suffix="%" />
-            </p>
-          </div>
-          <TrendingUp className="w-9 h-9 text-red-400/50" />
-        </div>
-        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-red-100 dark:bg-red-500/10">
-          <div
-            className="h-full rounded-full bg-gradient-to-r from-red-400 to-red-500 transition-all duration-700"
-            style={{ width: `${Math.min(100, stats.bug_rate * 100)}%` }}
-          />
-        </div>
-      </div>
-
-      <div className="h-44 mb-4">
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie data={pieData} cx="50%" cy="50%" innerRadius={48} outerRadius={70} paddingAngle={4} dataKey="value" stroke="none">
-              {pieData.map((entry, i) => (
-                <Cell key={i} fill={entry.color} />
+    <>
+      <section className="panel panel-enter">
+        <h2 className="panel-title">
+          <span className="panel-icon"><PieIcon className="h-4 w-4" /></span> {t('stats.distribution')}
+        </h2>
+        {!hasData ? empty : (
+          <div className="flex flex-col items-center gap-5">
+            <div className="relative h-44 w-44 shrink-0">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={pieData} cx="50%" cy="50%" innerRadius={56} outerRadius={78} paddingAngle={4} cornerRadius={6} dataKey="value" stroke="none">
+                    {pieData.map((entry) => <Cell key={entry.name} fill={entry.color} />)}
+                  </Pie>
+                  <Tooltip contentStyle={tooltipStyle} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-3xl font-bold tracking-tight text-[#0F1B24] dark:text-white">{total}</span>
+                <span className="tile-label">{t('stats.analysesLabel')}</span>
+              </div>
+            </div>
+            <ul className="grid w-full grid-cols-2 gap-2.5">
+              {pieData.map((d) => (
+                <li key={d.name} className="tile flex flex-col gap-1 !py-2.5 text-sm">
+                  <span className="flex items-center gap-2 text-[#0F1B24] dark:text-gray-200">
+                    <span className="h-2.5 w-2.5 rounded-full" style={{ background: d.color, boxShadow: `0 0 8px ${d.color}` }} />
+                    {d.name}
+                  </span>
+                  <span className="bs-mono text-xs">
+                    <b className="text-[#0F1B24] dark:text-white">{d.value}</b>
+                    <span className="ml-1.5 text-[#5B6B74] dark:text-gray-500">{total ? Math.round((d.value / total) * 100) : 0}%</span>
+                  </span>
+                </li>
               ))}
-            </Pie>
-            <Tooltip contentStyle={tooltipStyle} />
-          </PieChart>
-        </ResponsiveContainer>
-        <div className="-mt-1 flex justify-center gap-4 text-xs text-[#5B6B74] dark:text-gray-400">
-          {pieData.map((d) => (
-            <span key={d.name} className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full" style={{ background: d.color }} /> {d.name}
-            </span>
-          ))}
-        </div>
-      </div>
-
-      {classData.length > 0 && (
-        <div className="mt-8">
-          <h3 className="tile-label mb-3">{t('stats.byClass')}</h3>
-          <div className="h-48">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={classData} layout="vertical" margin={{ left: 10, right: 16 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} horizontal={false} />
-                <XAxis type="number" stroke={axisStroke} fontSize={11} allowDecimals={false} />
-                <YAxis type="category" dataKey="name" stroke={axisStroke} fontSize={11} width={95} />
-                <Tooltip contentStyle={tooltipStyle} cursor={{ fill: isDark ? '#ffffff08' : '#0d948810' }} />
-                <Bar dataKey="value" radius={[0, 6, 6, 0]}>
-                  {classData.map((_, i) => (
-                    <Cell key={i} fill={CLASS_COLORS[i % CLASS_COLORS.length]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+            </ul>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </section>
+
+      <section className="panel panel-enter">
+        <h2 className="panel-title">
+          <span className="panel-icon"><BarChart3 className="h-4 w-4" /></span> {t('stats.classesTitle')}
+        </h2>
+        {!hasData ? empty : !anyClass ? (
+          <div className="empty-state">{t('stats.noClassData')}</div>
+        ) : (
+          <ul className="space-y-3.5">
+            {classes.map(({ name, value }, i) => (
+              <li key={name} className="cls-row" style={{ '--c': classColor(name), '--i': i }}>
+                <div className="cls-row__head">
+                  <span className="flex items-center gap-2">
+                    <span className="h-2.5 w-2.5 rounded-full" style={{ background: classColor(name) }} />
+                    <span className={value === 0 ? 'opacity-50' : ''}>{tClass(name)}</span>
+                  </span>
+                  <span className="bs-mono text-xs font-semibold" style={{ color: value ? classColor(name) : undefined }}>{value}</span>
+                </div>
+                <div className="cls-row__track">
+                  <span className="cls-row__fill" style={{ width: `${(value / maxCount) * 100}%` }} />
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </>
   );
 }

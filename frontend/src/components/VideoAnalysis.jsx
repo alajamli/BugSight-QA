@@ -1,10 +1,11 @@
 import { useRef, useState } from 'react';
 import axios from 'axios';
-import { Video, Loader2, Film, Play, X } from 'lucide-react';
+import { Loader2, Film, Play, X } from 'lucide-react';
 import { api } from '../api';
 import { useI18n } from '../i18n';
 import { useToast } from '../ToastContext';
 import VideoResultPanel from './VideoResultPanel';
+import ConfidenceControl from './ConfidenceControl';
 
 // Keep in sync with the backend (ALLOWED_VIDEO_EXT, BUGSIGHT_MAX_UPLOAD_MB).
 const VIDEO_EXTENSIONS = ['.mp4', '.avi', '.mov', '.mkv', '.webm'];
@@ -68,88 +69,70 @@ export default function VideoAnalysis({ onVideoReport, hideResult = false }) {
   };
 
   const handleCancel = () => abortRef.current?.abort();
+  const openPicker = () => !busy && document.getElementById('video-input')?.click();
 
   return (
-    <div className="panel panel-enter">
-      <h2 className="panel-title">
-        <span className="panel-icon"><Video className="w-4 h-4" /></span> {t('video.title')}
-      </h2>
-
-      {/* Upload zone */}
-      <div
-        onClick={() => !busy && document.getElementById('video-input')?.click()}
-        className={`border-2 border-dashed border-[#C9D8DB] dark:border-[#2A3748] rounded-xl p-6 text-center transition-all ${
-          busy
-            ? 'opacity-60 cursor-not-allowed'
-            : 'cursor-pointer hover:border-[#0D9488] dark:hover:border-[#5EEAD4] hover:bg-gray-50 dark:hover:bg-gray-800/50'
-        }`}
-      >
-        {file ? (
-          <div className="flex items-center justify-center gap-2 text-gray-600 dark:text-gray-300">
-            <Film className="w-5 h-5" />
-            <p className="text-sm truncate max-w-xs">{file.name}</p>
-            <span className="text-gray-400 dark:text-gray-500 text-xs">({(file.size / 1024 / 1024).toFixed(1)} MB)</span>
+    <div className="space-y-5">
+      {file ? (
+        <div className="file-chip">
+          <span className="file-chip__thumb"><Film className="h-5 w-5" /></span>
+          <div className="min-w-0 flex-1">
+            <p className="file-chip__name" title={file.name}>{file.name}</p>
+            <p className="file-chip__meta">{(file.size / 1024 / 1024).toFixed(1)} MB · {t('upload.ready')}</p>
           </div>
-        ) : (
-          <>
-            <Film className="w-10 h-10 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
-            <p className="text-gray-500 dark:text-gray-400 text-sm">{t('video.upload')}</p>
-            <p className="text-gray-400 dark:text-gray-600 text-xs mt-1">{t('video.formats')}</p>
-          </>
-        )}
-        <input
-          id="video-input"
-          type="file"
-          accept="video/*"
-          className="hidden"
-          disabled={busy}
-          onChange={(e) => {
-            handleFile(e.target.files[0]);
-            e.target.value = ''; // allow re-selecting the same file after a rejection
-          }}
-        />
-      </div>
-
-      {/* Confidence slider */}
-      <div className="mt-4">
-        <label className="text-sm font-medium text-gray-600 dark:text-gray-300 flex items-center justify-between">
-          <span>{t('common.confidence')}</span>
-          <span className="text-[#0D9488] dark:text-[#5EEAD4] font-mono">{confidence.toFixed(2)}</span>
-        </label>
-        <input
-          type="range"
-          min="0.05"
-          max="0.95"
-          step="0.05"
-          value={confidence}
-          disabled={busy}
-          onChange={(e) => setConfidence(parseFloat(e.target.value))}
-          className="w-full mt-2 accent-[#0D9488] dark:accent-[#5EEAD4]"
-        />
-      </div>
-
-      {/* Sampling depth */}
-      <div className="mt-4 flex items-center justify-between gap-3">
-        <label htmlFor="video-frames" className="text-sm font-medium text-gray-600 dark:text-gray-300">
-          {t('video.frames')}
-        </label>
-        <select
-          id="video-frames"
-          className="field"
-          value={maxFrames}
-          disabled={busy}
-          onChange={(e) => setMaxFrames(Number(e.target.value))}
+          <button type="button" className="icon-btn" onClick={() => setFile(null)} disabled={busy} aria-label={t('upload.remove')} title={t('upload.remove')}>
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      ) : (
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={openPicker}
+          onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), openPicker())}
+          className={`dropzone ${busy ? 'dropzone--busy' : ''}`}
         >
-          {FRAME_OPTIONS.map((n) => (
-            <option key={n} value={n}>{t('video.framesOption', { n })}</option>
-          ))}
-        </select>
-      </div>
-      <p className="mt-1 text-[11px] text-gray-400 dark:text-gray-500">{t('video.framesHint')}</p>
+          <div className="dropzone__icon"><Film className="h-6 w-6" /></div>
+          <p className="text-sm font-semibold text-[#0F1B24] dark:text-gray-100">{t('video.upload')}</p>
+          <p className="mt-1 text-xs text-[#5B6B74] dark:text-gray-500">{t('video.formats')}</p>
+        </div>
+      )}
+      <input
+        id="video-input"
+        type="file"
+        accept="video/*"
+        className="hidden"
+        disabled={busy}
+        onChange={(e) => {
+          handleFile(e.target.files[0]);
+          e.target.value = ''; // allow re-selecting the same file after a rejection
+        }}
+      />
 
-      {/* Progress */}
+      <ConfidenceControl id="video-confidence" value={confidence} onChange={setConfidence} disabled={busy} />
+
+      <div>
+        <span id="video-frames-label" className="form-label">{t('video.frames')}</span>
+        <div className="seg seg--full mt-2" role="group" aria-labelledby="video-frames-label">
+          {FRAME_OPTIONS.map((n) => (
+            <button
+              key={n}
+              type="button"
+              className="seg__btn !px-2"
+              aria-pressed={maxFrames === n}
+              disabled={busy}
+              onClick={() => setMaxFrames(n)}
+              title={t('video.framesOption', { n })}
+            >
+              {n}
+            </button>
+          ))}
+        </div>
+        <p className="form-help">{t('video.framesHint')}</p>
+      </div>
+
       {busy && (
-        <div className="mt-4" role="status" aria-live="polite">
+        <div role="status" aria-live="polite">
           <div className="mb-1.5 flex items-center justify-between text-xs text-[#5B6B74] dark:text-gray-400">
             <span>{phase === 'uploading' ? t('video.uploading') : t('video.analyzing')}</span>
             {phase === 'uploading' && <span className="bs-mono">{uploadPct}%</span>}
@@ -164,23 +147,23 @@ export default function VideoAnalysis({ onVideoReport, hideResult = false }) {
         </div>
       )}
 
-      <div className="mt-4 space-y-2">
+      <div className="space-y-2">
         <button onClick={handleAnalyze} disabled={!file || busy} className="btn-primary">
           {busy ? (
-            <><Loader2 className="w-4 h-4 animate-spin" /> {phase === 'uploading' ? t('video.uploading') : t('video.analyzing')}</>
+            <><Loader2 className="h-4 w-4 animate-spin" /> {phase === 'uploading' ? t('video.uploading') : t('video.analyzing')}</>
           ) : (
-            <><Play className="w-4 h-4" /> {t('video.analyze')}</>
+            <><Play className="h-4 w-4" /> {t('video.analyze')}</>
           )}
         </button>
         {busy && (
           <button type="button" onClick={handleCancel} className="btn-secondary">
-            <X className="w-4 h-4" /> {t('video.cancel')}
+            <X className="h-4 w-4" /> {t('video.cancel')}
           </button>
         )}
       </div>
 
       {result && !hideResult && (
-        <div className="mt-6">
+        <div className="pt-1">
           <VideoResultPanel result={result} />
         </div>
       )}

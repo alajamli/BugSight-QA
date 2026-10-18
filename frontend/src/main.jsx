@@ -10,6 +10,7 @@ import '@fontsource/ibm-plex-mono/latin-500.css';
 import '@fontsource/ibm-plex-mono/latin-600.css';
 import './index.css';
 import './design.css';
+import './dashboard.css';
 import './login.css';
 import App from './App.jsx';
 import { ThemeProvider } from './ThemeContext.jsx';

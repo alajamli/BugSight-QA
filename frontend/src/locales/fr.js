@@ -166,6 +166,45 @@ export default {
   'history.loadFailed': 'Impossible de charger l’historique.',
 
   'metrics.title': 'Qualité du modèle',
+  'metrics.precisionHint': 'Part des détections qui sont de vrais défauts',
+  'metrics.recallHint': 'Part des vrais défauts qui sont retrouvés',
+  'metrics.map50Hint': 'Précision moyenne à IoU 0,5',
+  'metrics.map5095Hint': 'Précision moyenne sur IoU 0,5 à 0,95',
+
+  'app.hello': 'Bon retour, {name}',
+  'app.overviewSub': 'Détectez les défauts de rendu de vos captures et suivez la qualité du jeu dans le temps.',
+  'app.account': 'Compte',
+
+  'kpi.total': 'Analyses',
+  'kpi.totalHint': 'captures et vidéos',
+  'kpi.bugs': 'Avec bugs',
+  'kpi.bugsHint': '{pct} % des analyses',
+  'kpi.clean': 'Propres',
+  'kpi.cleanHint': '{pct} % des analyses',
+  'kpi.rate': 'Taux de bugs',
+  'kpi.rateHint': 'Analyses où un défaut a été trouvé',
+  'kpi.model': 'mAP50 du modèle',
+  'kpi.modelHint': 'Précision sur le jeu de validation',
+
+  'analyze.title': 'Nouvelle analyse',
+  'analyze.tabs': 'Type d’analyse',
+  'analyze.tabImage': 'Capture',
+  'analyze.tabVideo': 'Vidéo',
+
+  'conf.sensitive': 'Sensible',
+  'conf.balanced': 'Équilibré',
+  'conf.strict': 'Strict',
+  'conf.hint': 'Une valeur basse détecte plus de défauts mais peut ajouter des faux positifs.',
+
+  'upload.remove': 'Retirer le fichier',
+  'upload.ready': 'Prêt à analyser',
+
+  'stats.distribution': 'Répartition des verdicts',
+  'stats.analysesLabel': 'analyses',
+  'stats.classesTitle': 'Bugs par classe',
+  'stats.noClassData': 'Aucune classe de bug enregistrée',
+
+  'history.reset': 'Réinitialiser les filtres',
 
   'admin.loading': 'Chargement du centre d’administration…',
   'admin.unavailable': 'Données indisponibles.',
