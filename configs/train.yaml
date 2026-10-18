@@ -1,0 +1,60 @@
+# BugSight QA - YOLOv8 training configuration
+#
+# Tuned for a very small dataset (~200 train images, ~330 labelled boxes):
+# the model is data-starved, so the goal is to regularise, not to add capacity.
+
+model:
+  weights: yolov8n.pt
+  task: detect
+
+data:
+  yaml: data/processed/data.yaml
+
+train:
+  epochs: 150            # small data converges slowly; patience stops it early
+  imgsz: 640
+  batch: 16
+  patience: 40
+  optimizer: AdamW       # more stable than SGD on tiny datasets
+  lr0: 0.001
+  lrf: 0.01
+  momentum: 0.937
+  weight_decay: 0.001    # 2x stronger L2 to curb memorisation
+  warmup_epochs: 3
+  warmup_momentum: 0.8
+  box: 7.5
+  cls: 0.5
+  dfl: 1.5
+
+augment:
+  hsv_h: 0.015
+  hsv_s: 0.7
+  hsv_v: 0.4
+  degrees: 0.0           # rotating distorts screen_tear / z_fighting patterns
+  translate: 0.1
+  scale: 0.5
+  fliplr: 0.5
+  mosaic: 1.0
+  mixup: 0.1
+
+# Extra Ultralytics arguments, passed through as-is.
+extra:
+  cos_lr: true           # cosine LR decay -> smoother, less noisy final epochs
+  close_mosaic: 15       # last epochs on clean images to stabilise precision
+  freeze: 10             # keep the COCO-pretrained backbone, train neck+head
+  dropout: 0.0
+  erasing: 0.3           # random erasing as extra regularisation
+  flipud: 0.0
+  amp: true
+  cache: true            # whole dataset fits in RAM; speeds up epochs
+  plots: true
+
+output:
+  project: runs
+  name: bugsight_yolov8n_v2   # new name so the v1 baseline is kept for comparison
+  exist_ok: false
+
+# "0" = first GPU, "cpu" = CPU. Overridable with --device.
+device: "0"
+workers: 4
+seed: 42

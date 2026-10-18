@@ -1,0 +1,33 @@
+# -- Core --
+numpy
+pandas
+opencv-python
+Pillow
+matplotlib
+tqdm
+
+# -- Deep Learning / Object Detection --
+ultralytics
+torch
+torchvision
+
+# -- API --
+flask
+flask-cors
+gunicorn
+
+# -- Config & utilities --
+pyyaml
+python-dotenv
+
+# -- Dev / quality --
+pytest
+pytest-cov
+ruff
+pre-commit
+jupyter
+flask-sqlalchemy
+flask-jwt-extended
+flask-limiter
+bcrypt
+reportlab

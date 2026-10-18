@@ -1,0 +1,48 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bugsight-api
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./runs:/app/models:ro
+      - ./data:/app/data:ro
+      # Dedicated read-write volume for the SQLite DB. Previously there was no
+      # volume for it at all: users, predictions and history all lived only in
+      # the container's writable layer and vanished on every `docker compose
+      # down` / rebuild.
+      - bugsight-db:/app/instance
+    environment:
+      - BUGSIGHT_WEIGHTS=/app/models/detect/runs/bugsight_yolov8n/weights/best.pt
+      - BUGSIGHT_DATA_YAML=/app/data/processed/data.yaml
+      - DATABASE_URL=sqlite:////app/instance/bugsight.db
+      - PYTHONPATH=/app
+      - JWT_SECRET=${JWT_SECRET:?Set JWT_SECRET in .env (python -c "import secrets; print(secrets.token_hex(32))")}
+      - BUGSIGHT_ADMIN_EMAIL=${BUGSIGHT_ADMIN_EMAIL:-admin@bugsight.io}
+      - BUGSIGHT_ADMIN_PASSWORD=${BUGSIGHT_ADMIN_PASSWORD:-}
+      - JWT_ACCESS_EXPIRES_MIN=${JWT_ACCESS_EXPIRES_MIN:-60}
+      - JWT_REFRESH_EXPIRES_DAYS=${JWT_REFRESH_EXPIRES_DAYS:-30}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/api/health', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: bugsight-web
+    ports:
+      - "8085:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  bugsight-db:

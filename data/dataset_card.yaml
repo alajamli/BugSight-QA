@@ -1,0 +1,19 @@
+# BugSight QA - dataset card
+name: bugsight_floating_objects
+version: 0.1.0
+format: YOLOv8
+
+classes:
+  - floating_object
+
+splits:
+  train: 0.7
+  val: 0.2
+  test: 0.1
+
+generation:
+  image_size: [640, 480]
+  bug_probability: 0.5
+  objects_per_scene: [2, 6]
+  object_size_px: [28, 72]
+  hard_negatives: true
