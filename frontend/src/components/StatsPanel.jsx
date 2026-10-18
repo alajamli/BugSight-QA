@@ -1,6 +1,7 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { BarChart3, TrendingUp } from 'lucide-react';
 import { useTheme } from '../ThemeContext';
+import CountUp from './CountUp';
 import { useI18n } from '../i18n';
 
 const CLASS_COLORS = ['#F87171', '#FBBF24', '#A78BFA', '#60A5FA', '#34D399', '#F472B6'];
@@ -54,15 +55,15 @@ export default function StatsPanel({ stats }) {
 
       <div className="grid grid-cols-3 gap-2.5 mb-4">
         <div className="tile text-center">
-          <p className="text-2xl font-bold text-[#0F1B24] dark:text-white">{stats.total_analyses}</p>
+          <p className="text-2xl font-bold text-[#0F1B24] dark:text-white"><CountUp value={stats.total_analyses} /></p>
           <p className="tile-label">{t('stats.total')}</p>
         </div>
         <div className="tile text-center">
-          <p className="text-2xl font-bold text-red-500 dark:text-red-400">{stats.bug_detected}</p>
+          <p className="text-2xl font-bold text-red-500 dark:text-red-400"><CountUp value={stats.bug_detected} /></p>
           <p className="tile-label">{t('stats.bugs')}</p>
         </div>
         <div className="tile text-center">
-          <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{stats.clean}</p>
+          <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400"><CountUp value={stats.clean} /></p>
           <p className="tile-label">{t('stats.clean')}</p>
         </div>
       </div>
@@ -72,7 +73,7 @@ export default function StatsPanel({ stats }) {
           <div>
             <p className="tile-label">{t('stats.rate')}</p>
             <p className="mt-1 text-3xl font-bold text-red-500 dark:text-red-400">
-              {(stats.bug_rate * 100).toFixed(1)}%
+              <CountUp value={stats.bug_rate * 100} decimals={1} suffix="%" />
             </p>
           </div>
           <TrendingUp className="w-9 h-9 text-red-400/50" />

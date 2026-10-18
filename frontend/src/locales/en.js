@@ -101,6 +101,10 @@ export default {
   'result.detections': 'Detections',
   'result.image': 'Image',
   'result.file': 'File',
+  'result.scanning': 'Scanning your capture',
+  'result.scanningHint': 'The model is looking for rendering defects...',
+  'result.verdictBug': '{n} rendering defect(s) found. Hover a row to locate it.',
+  'result.verdictOk': 'This capture looks clean.',
   'result.objects': 'Detected objects',
 
   'stats.title': 'Session Statistics',

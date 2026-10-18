@@ -33,6 +33,19 @@ export default function App() {
   const [reportLoading, setReportLoading] = useState(false);
   const [adminMode, setAdminMode] = useState(false);
 
+  // Cursor-following spotlight on every .panel (CSS reads --mx / --my).
+  useEffect(() => {
+    const onMove = (event) => {
+      const panel = event.target.closest?.('.panel');
+      if (!panel) return;
+      const rect = panel.getBoundingClientRect();
+      panel.style.setProperty('--mx', `${event.clientX - rect.left}px`);
+      panel.style.setProperty('--my', `${event.clientY - rect.top}px`);
+    };
+    window.addEventListener('pointermove', onMove, { passive: true });
+    return () => window.removeEventListener('pointermove', onMove);
+  }, []);
+
   useEffect(() => {
     const token = localStorage.getItem('bugsight_token');
     const savedUser = localStorage.getItem('bugsight_user');
@@ -78,6 +91,7 @@ export default function App() {
 
   const handlePredict = async (file, confidence) => {
     setLoading(true);
+    setResult(null);
     // Release the previous preview so repeated analyses don't leak blob URLs.
     setImageUrl((previous) => {
       if (previous) URL.revokeObjectURL(previous);
@@ -143,8 +157,14 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#F4F7F7] dark:bg-[#0A0E14] relative transition-colors">
-      <div className="bs-root bs-grid-bg bs-glow min-h-screen">
-        <header className="bg-white/90 dark:bg-[#0D1219]/90 border-b border-[#DCE6E8] dark:border-[#1E2733] sticky top-0 z-10 backdrop-blur transition-colors">
+      <div className="aurora" aria-hidden="true">
+        <span className="aurora__blob aurora__blob--a" />
+        <span className="aurora__blob aurora__blob--b" />
+        <span className="aurora__blob aurora__blob--c" />
+      </div>
+
+      <div className="bs-root bs-grid-bg relative z-[1] min-h-screen">
+        <header className="bg-white/90 dark:bg-[#0D1219]/90 border-b border-[#DCE6E8] dark:border-[#1E2733] header-glow top-0 z-10 backdrop-blur-xl transition-colors">
           <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="bs-reticle w-11 h-11 rounded-md bg-[#F4F7F7] dark:bg-[#111826] border border-[#DCE6E8] dark:border-[#243040] flex items-center justify-center overflow-hidden">
@@ -154,7 +174,7 @@ export default function App() {
               <div>
                 <div className="flex items-center gap-2">
                   <h1 className="bs-mono text-base font-semibold text-[#0F1B24] dark:text-white tracking-wide uppercase">
-                    BugSight <span className="text-[#0D9488] dark:text-[#5EEAD4]">QA</span>
+                    <span className="brand-gradient">BugSight QA</span>
                   </h1>
                   <span className="relative flex h-1.5 w-1.5">
                     <span className="bs-pulse-dot absolute inline-flex h-1.5 w-1.5 rounded-full bg-[#0D9488] dark:bg-[#5EEAD4]" />
@@ -216,7 +236,9 @@ export default function App() {
             </div>
 
             <div className="lg:col-span-2 space-y-6">
-              {result ? <ResultViewer result={result} imageUrl={imageUrl} /> : !videoResult && <ResultViewer result={null} imageUrl={null} />}
+              {(result || loading || !videoResult) && (
+                <ResultViewer result={result} imageUrl={imageUrl} loading={loading} />
+              )}
               {videoResult && <VideoResultPanel result={videoResult} />}
             </div>
           </div>

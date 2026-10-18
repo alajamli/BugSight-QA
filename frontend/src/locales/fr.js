@@ -100,6 +100,10 @@ export default {
   'result.detections': 'Détections',
   'result.image': 'Image',
   'result.file': 'Fichier',
+  'result.scanning': 'Analyse de votre capture',
+  'result.scanningHint': 'Le modèle recherche des défauts de rendu...',
+  'result.verdictBug': '{n} défaut(s) de rendu détecté(s). Survolez une ligne pour le localiser.',
+  'result.verdictOk': 'Cette capture semble propre.',
   'result.objects': 'Objets détectés',
 
   'stats.title': 'Statistiques de session',

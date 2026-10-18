@@ -9,6 +9,7 @@ import '@fontsource/ibm-plex-mono/latin-400.css';
 import '@fontsource/ibm-plex-mono/latin-500.css';
 import '@fontsource/ibm-plex-mono/latin-600.css';
 import './index.css';
+import './design.css';
 import App from './App.jsx';
 import { ThemeProvider } from './ThemeContext.jsx';
 import { I18nProvider } from './i18n.jsx';

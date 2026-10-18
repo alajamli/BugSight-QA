@@ -1,0 +1,228 @@
+/* ══ Visual upgrade: aurora, spotlight, radar, scan laser ═══════════════ */
+
+/* Slow-moving colour mesh behind the whole dashboard */
+.aurora {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.aurora__blob {
+  position: absolute;
+  width: 46vmax;
+  height: 46vmax;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.35;
+  will-change: transform;
+}
+.aurora__blob--a { top: -18vmax; left: -12vmax; background: #14b8a6; animation: aurora-a 26s ease-in-out infinite alternate; }
+.aurora__blob--b { top: 8vmax; right: -16vmax; background: #7c3aed; opacity: 0.22; animation: aurora-b 32s ease-in-out infinite alternate; }
+.aurora__blob--c { bottom: -22vmax; left: 22vmax; background: #f97316; opacity: 0.14; animation: aurora-c 38s ease-in-out infinite alternate; }
+:root:not(.dark) .aurora__blob { opacity: 0.16; }
+:root:not(.dark) .aurora__blob--b { opacity: 0.1; }
+:root:not(.dark) .aurora__blob--c { opacity: 0.08; }
+@keyframes aurora-a { to { transform: translate(14vmax, 10vmax) scale(1.15); } }
+@keyframes aurora-b { to { transform: translate(-12vmax, 14vmax) scale(0.9); } }
+@keyframes aurora-c { to { transform: translate(-16vmax, -8vmax) scale(1.2); } }
+
+/* Spotlight that follows the cursor inside every panel */
+.panel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity 0.35s;
+  background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 0%), rgba(45, 212, 191, 0.13), transparent 60%);
+}
+.panel:hover::after { opacity: 1; }
+.dark .panel::after {
+  background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 0%), rgba(94, 234, 212, 0.1), transparent 60%);
+}
+
+/* Brand wordmark */
+.brand-gradient {
+  background: linear-gradient(100deg, #0d9488 0%, #38bdf8 45%, #a78bfa 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.dark .brand-gradient {
+  background: linear-gradient(100deg, #5eead4 0%, #7dd3fc 45%, #c4b5fd 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+.header-glow { position: sticky; }
+.header-glow::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(45, 212, 191, 0.7), rgba(167, 139, 250, 0.6), transparent);
+}
+
+/* ── Radar (empty state) ─────────────────────────────────────────────── */
+.radar {
+  position: relative;
+  width: 15rem;
+  height: 15rem;
+  margin: 0 auto;
+  border-radius: 50%;
+  border: 1px solid rgba(13, 148, 136, 0.35);
+  background:
+    radial-gradient(circle, rgba(13, 148, 136, 0.14) 0%, transparent 62%),
+    repeating-radial-gradient(circle at center, transparent 0 2.4rem, rgba(13, 148, 136, 0.22) 2.4rem calc(2.4rem + 1px));
+  box-shadow: 0 0 60px -10px rgba(13, 148, 136, 0.45), inset 0 0 40px rgba(13, 148, 136, 0.12);
+}
+.dark .radar {
+  border-color: rgba(94, 234, 212, 0.4);
+  background:
+    radial-gradient(circle, rgba(94, 234, 212, 0.12) 0%, transparent 62%),
+    repeating-radial-gradient(circle at center, transparent 0 2.4rem, rgba(94, 234, 212, 0.2) 2.4rem calc(2.4rem + 1px));
+  box-shadow: 0 0 70px -10px rgba(94, 234, 212, 0.4), inset 0 0 40px rgba(94, 234, 212, 0.1);
+}
+.radar::before,
+.radar::after {
+  content: "";
+  position: absolute;
+  background: rgba(13, 148, 136, 0.25);
+}
+.radar::before { left: 50%; top: 0; bottom: 0; width: 1px; }
+.radar::after { top: 50%; left: 0; right: 0; height: 1px; }
+.dark .radar::before, .dark .radar::after { background: rgba(94, 234, 212, 0.22); }
+.radar__sweep {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, transparent 0deg, transparent 280deg, rgba(13, 148, 136, 0.55) 360deg);
+  animation: radar-spin 3.6s linear infinite;
+}
+.dark .radar__sweep {
+  background: conic-gradient(from 0deg, transparent 0deg, transparent 280deg, rgba(94, 234, 212, 0.5) 360deg);
+}
+@keyframes radar-spin { to { transform: rotate(360deg); } }
+.radar__blip {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #f87171;
+  box-shadow: 0 0 12px 3px rgba(248, 113, 113, 0.75);
+  opacity: 0;
+  animation: radar-blip 3.6s ease-out infinite;
+}
+@keyframes radar-blip {
+  0%   { opacity: 0; transform: scale(0.4); }
+  8%   { opacity: 1; transform: scale(1.3); }
+  45%  { opacity: 0.55; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0.8); }
+}
+.radar__core {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  display: grid;
+  width: 3.4rem;
+  height: 3.4rem;
+  transform: translate(-50%, -50%);
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid rgba(13, 148, 136, 0.5);
+  background: rgba(244, 247, 247, 0.9);
+  box-shadow: 0 0 24px rgba(13, 148, 136, 0.5);
+}
+.dark .radar__core { background: rgba(10, 14, 20, 0.92); border-color: rgba(94, 234, 212, 0.55); box-shadow: 0 0 28px rgba(94, 234, 212, 0.45); }
+
+/* ── Scan laser (while analysing) ────────────────────────────────────── */
+.scan-frame {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0.9rem;
+  border: 1px solid rgba(13, 148, 136, 0.5);
+  box-shadow: 0 0 0 1px rgba(13, 148, 136, 0.1), 0 0 50px -12px rgba(13, 148, 136, 0.65);
+}
+.dark .scan-frame { border-color: rgba(94, 234, 212, 0.5); box-shadow: 0 0 0 1px rgba(94, 234, 212, 0.1), 0 0 60px -12px rgba(94, 234, 212, 0.55); }
+.scan-frame__grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(45, 212, 191, 0.12) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(45, 212, 191, 0.12) 1px, transparent 1px);
+  background-size: 28px 28px;
+  mix-blend-mode: screen;
+}
+.scan-frame__laser {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 22%;
+  background: linear-gradient(to bottom, transparent, rgba(45, 212, 191, 0.38) 85%, rgba(94, 234, 212, 0.95) 99%, transparent 100%);
+  animation: laser-sweep 1.8s ease-in-out infinite;
+}
+@keyframes laser-sweep {
+  0%   { top: -22%; }
+  100% { top: 100%; }
+}
+
+/* ── Result frame glow & list ────────────────────────────────────────── */
+.result-frame--bug { box-shadow: 0 0 0 1px rgba(248, 113, 113, 0.35), 0 0 50px -14px rgba(248, 113, 113, 0.75); }
+.result-frame--ok  { box-shadow: 0 0 0 1px rgba(52, 211, 153, 0.35), 0 0 50px -14px rgba(52, 211, 153, 0.7); }
+.det-row {
+  position: relative;
+  border-left: 3px solid var(--c, #f87171);
+  transition: transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+  animation: det-in 0.45s ease-out both;
+  animation-delay: calc(var(--i, 0) * 70ms);
+}
+.det-row:hover, .det-row[data-active="true"] {
+  transform: translateX(4px);
+  box-shadow: -8px 0 24px -12px var(--c, #f87171);
+}
+@keyframes det-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.det-bar {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--c, #f87171) 55%, transparent), var(--c, #f87171));
+  box-shadow: 0 0 10px var(--c, #f87171);
+  transform-origin: left;
+  animation: bar-grow 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(var(--i, 0) * 70ms + 150ms);
+}
+@keyframes bar-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+/* Verdict banner */
+.verdict {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  border-radius: 0.9rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--vc) 55%, transparent);
+  background: linear-gradient(100deg, color-mix(in srgb, var(--vc) 16%, transparent), transparent 70%);
+}
+.verdict__icon {
+  display: grid;
+  width: 2.6rem;
+  height: 2.6rem;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 0.7rem;
+  color: var(--vc);
+  background: color-mix(in srgb, var(--vc) 14%, transparent);
+  box-shadow: 0 0 22px -4px var(--vc);
+  animation: verdict-pulse 2.4s ease-in-out infinite;
+}
+@keyframes verdict-pulse { 50% { box-shadow: 0 0 34px 0 var(--vc); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .aurora__blob, .radar__sweep, .radar__blip, .scan-frame__laser, .verdict__icon { animation: none; }
+  .radar__blip { opacity: 0.8; }
+}
