@@ -56,6 +56,11 @@ export default {
   'login.showPassword': 'Afficher le mot de passe',
   'login.wait': 'Veuillez patienter...',
   'login.cardFooter': 'Détection visuelle de bugs assistée par IA',
+  'login.capsLock': 'Verr. Maj. activé',
+  'login.strengthWeak': 'Faible',
+  'login.strengthFair': 'Moyen',
+  'login.strengthGood': 'Bon',
+  'login.strengthStrong': 'Fort',
   'login.authFailed': 'Échec de l’authentification',
 
   'upload.title': 'Analyser une capture',

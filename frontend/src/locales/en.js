@@ -57,6 +57,11 @@ export default {
   'login.showPassword': 'Show password',
   'login.wait': 'Please wait...',
   'login.cardFooter': 'AI-assisted visual bug detection',
+  'login.capsLock': 'Caps Lock is on',
+  'login.strengthWeak': 'Weak',
+  'login.strengthFair': 'Fair',
+  'login.strengthGood': 'Good',
+  'login.strengthStrong': 'Strong',
   'login.authFailed': 'Authentication failed',
 
   'upload.title': 'Analyze a Screenshot',

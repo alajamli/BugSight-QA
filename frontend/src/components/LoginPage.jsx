@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   LogIn,
   UserPlus,
@@ -8,10 +8,44 @@ import {
   ScanSearch,
   Lightbulb,
   Power,
+  Mail,
+  Lock,
+  User,
+  TriangleAlert,
 } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 import LanguageToggle from './LanguageToggle';
 import { useI18n } from '../i18n';
+
+// 0-4: length, upper+lower, digit, symbol
+function passwordScore(value) {
+  if (!value) return 0;
+  let score = 0;
+  if (value.length >= 8) score += 1;
+  if (/[a-z]/.test(value) && /[A-Z]/.test(value)) score += 1;
+  if (/\d/.test(value)) score += 1;
+  if (/[^A-Za-z0-9]/.test(value) || value.length >= 14) score += 1;
+  return score;
+}
+
+const STRENGTH_KEYS = ['', 'login.strengthWeak', 'login.strengthFair', 'login.strengthGood', 'login.strengthStrong'];
+
+// Dust motes drifting in the lamplight (positions are random once per mount).
+function useDust(count = 26) {
+  return useMemo(
+    () =>
+      Array.from({ length: count }, (_, i) => ({
+        id: i,
+        left: 4 + Math.random() * 62,
+        top: 12 + Math.random() * 70,
+        size: 2 + Math.random() * 3,
+        drift: 10 + Math.random() * 26,
+        duration: 7 + Math.random() * 9,
+        delay: -Math.random() * 12,
+      })),
+    [count],
+  );
+}
 
 export default function LoginPage({ onLogin }) {
   const { t, tError } = useI18n();
@@ -24,6 +58,13 @@ export default function LoginPage({ onLogin }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [pulling, setPulling] = useState(false);
+  const [shake, setShake] = useState(false);
+  const [capsLock, setCapsLock] = useState(false);
+  const emailRef = useRef(null);
+  const nameRef = useRef(null);
+  const dust = useDust();
+
+  const score = passwordScore(password);
 
   const handleLampToggle = () => {
     setIsLit((current) => !current);
@@ -31,6 +72,19 @@ export default function LoginPage({ onLogin }) {
     // Brief cord-pull animation; purely visual, the toggle logic is unchanged.
     setPulling(true);
     setTimeout(() => setPulling(false), 340);
+  };
+
+  // Once the lamp is on and the card has faded in, put the cursor in the first field.
+  useEffect(() => {
+    if (!isLit) return undefined;
+    const timer = setTimeout(() => (mode === 'register' ? nameRef : emailRef).current?.focus(), 900);
+    return () => clearTimeout(timer);
+  }, [isLit, mode]);
+
+  const failWith = (value) => {
+    setError(value);
+    setShake(true);
+    setTimeout(() => setShake(false), 500);
   };
 
   const handleSubmit = async (event) => {
@@ -50,9 +104,13 @@ export default function LoginPage({ onLogin }) {
         body: JSON.stringify(body),
       });
 
-      const data = await response.json();
+      // A dead backend (e.g. the dev proxy answering 500 with an empty body) is not JSON.
+      const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw Object.assign(new Error(data.error || ''), { missing: !data.error });
+        throw Object.assign(new Error(data.error || ''), {
+          missing: !data.error,
+          unreachable: !data.error && response.status >= 500,
+        });
       }
 
       localStorage.setItem('bugsight_token', data.token);
@@ -63,9 +121,11 @@ export default function LoginPage({ onLogin }) {
       onLogin(data.user);
     } catch (submissionError) {
       // fetch() rejects with a TypeError when the server cannot be reached
-      if (submissionError instanceof TypeError) setError({ key: 'app.apiUnreachable' });
-      else if (submissionError.missing) setError({ key: 'login.authFailed' });
-      else setError(submissionError.message);
+      if (submissionError instanceof TypeError || submissionError.unreachable) {
+        failWith({ key: 'app.apiUnreachable' });
+      }
+      else if (submissionError.missing) failWith({ key: 'login.authFailed' });
+      else failWith(submissionError.message);
     } finally {
       setLoading(false);
     }
@@ -76,8 +136,31 @@ export default function LoginPage({ onLogin }) {
     setError(null);
   };
 
+  const trackCapsLock = (event) => setCapsLock(event.getModifierState?.('CapsLock') ?? false);
+
   return (
     <main className={`auth-shell ${isLit ? 'auth-shell--lit' : 'auth-shell--dark'}`}>
+      {/* The room the lamp lights up: warm wash, floor grid and drifting dust */}
+      <div className="auth-room" aria-hidden="true">
+        <div className="auth-room__wash" />
+        <div className="auth-room__floor" />
+        {dust.map((mote) => (
+          <i
+            key={mote.id}
+            className="auth-dust"
+            style={{
+              left: `${mote.left}%`,
+              top: `${mote.top}%`,
+              width: mote.size,
+              height: mote.size,
+              '--drift': `${mote.drift}px`,
+              animationDuration: `${mote.duration}s`,
+              animationDelay: `${mote.delay}s`,
+            }}
+          />
+        ))}
+      </div>
+
       <div className="auth-topbar">
         <span className="auth-topbar__status">
           <span className="auth-status-dot" /> {t('login.topbar')}
@@ -102,6 +185,7 @@ export default function LoginPage({ onLogin }) {
         <div className="lamp-stage">
           <div className="lamp-halo" aria-hidden="true" />
           <div className="lamp-floor" aria-hidden="true" />
+          <div className="auth-ray" aria-hidden="true" />
           <button
             type="button"
             className={`lamp-button ${isLit ? 'lamp-button--on' : ''} ${pulling ? 'lamp-button--pulling' : ''}`}
@@ -127,13 +211,20 @@ export default function LoginPage({ onLogin }) {
           </p>
         </div>
 
-        <section className={`auth-card ${isLit ? 'auth-card--visible' : ''}`} aria-hidden={!isLit}>
-          <div className="auth-card__header">
+        <section
+          className={`auth-card ${isLit ? 'auth-card--visible' : ''} ${shake ? 'auth-card--shake' : ''}`}
+          aria-hidden={!isLit}
+          // keeps the hidden form out of the tab order until the lamp is on
+          {...(isLit ? {} : { inert: '' })}
+        >
+          <div className="auth-card__header auth-stagger" style={{ '--s': 0 }}>
             <div className="auth-card__icon">
               <Lightbulb className="h-5 w-5" />
             </div>
             <div>
-              <p className="auth-card__eyebrow">{t('login.eyebrow')}</p>
+              <p className="auth-card__eyebrow">
+                <span className="auth-card__live" /> {t('login.eyebrow')}
+              </p>
               <h1>{mode === 'login' ? t('login.welcomeBack') : t('login.createAccount')}</h1>
               <p className="auth-card__subtitle">
                 {mode === 'login'
@@ -143,7 +234,7 @@ export default function LoginPage({ onLogin }) {
             </div>
           </div>
 
-          <div className="auth-tabs" role="tablist" aria-label={t('login.tabsLabel')}>
+          <div className="auth-tabs auth-stagger" style={{ '--s': 1 }} role="tablist" aria-label={t('login.tabsLabel')}>
             <button
               type="button"
               role="tab"
@@ -166,38 +257,50 @@ export default function LoginPage({ onLogin }) {
 
           <form onSubmit={handleSubmit} className="auth-form">
             {mode === 'register' && (
-              <label className="auth-field">
+              <label className="auth-field auth-stagger" style={{ '--s': 2 }}>
                 <span>{t('login.name')}</span>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
-                  required
-                  autoComplete="name"
-                  placeholder={t('login.namePh')}
-                />
+                <span className="auth-input">
+                  <User className="auth-input__icon" aria-hidden="true" />
+                  <input
+                    ref={nameRef}
+                    type="text"
+                    value={name}
+                    onChange={(event) => setName(event.target.value)}
+                    required
+                    autoComplete="name"
+                    placeholder={t('login.namePh')}
+                  />
+                </span>
               </label>
             )}
 
-            <label className="auth-field">
+            <label className="auth-field auth-stagger" style={{ '--s': 3 }}>
               <span>{t('login.email')}</span>
-              <input
-                type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                required
-                autoComplete="email"
-                placeholder={t('login.emailPh')}
-              />
+              <span className="auth-input">
+                <Mail className="auth-input__icon" aria-hidden="true" />
+                <input
+                  ref={emailRef}
+                  type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  required
+                  autoComplete="email"
+                  placeholder={t('login.emailPh')}
+                />
+              </span>
             </label>
 
-            <label className="auth-field">
+            <label className="auth-field auth-stagger" style={{ '--s': 4 }}>
               <span>{t('login.password')}</span>
-              <span className="auth-password">
+              <span className="auth-password auth-input">
+                <Lock className="auth-input__icon" aria-hidden="true" />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
+                  onKeyDown={trackCapsLock}
+                  onKeyUp={trackCapsLock}
+                  onBlur={() => setCapsLock(false)}
                   required
                   minLength={6}
                   autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
@@ -212,6 +315,21 @@ export default function LoginPage({ onLogin }) {
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </span>
+              {capsLock && (
+                <span className="auth-hint auth-hint--warn" role="status">
+                  <TriangleAlert className="h-3 w-3" /> {t('login.capsLock')}
+                </span>
+              )}
+              {mode === 'register' && password && (
+                <span className="auth-strength" data-score={score} aria-live="polite">
+                  <span className="auth-strength__bars" aria-hidden="true">
+                    {[1, 2, 3, 4].map((level) => (
+                      <i key={level} className={score >= level ? 'is-on' : ''} />
+                    ))}
+                  </span>
+                  <span className="auth-strength__label">{t(STRENGTH_KEYS[score] || STRENGTH_KEYS[1])}</span>
+                </span>
+              )}
             </label>
 
             {error && (
@@ -221,7 +339,7 @@ export default function LoginPage({ onLogin }) {
               </div>
             )}
 
-            <button type="submit" className="auth-submit" disabled={loading}>
+            <button type="submit" className="auth-submit auth-stagger" style={{ '--s': 5 }} disabled={loading}>
               {loading ? (
                 <><Loader2 className="h-4 w-4 animate-spin" /> {t('login.wait')}</>
               ) : mode === 'login' ? (
@@ -232,7 +350,7 @@ export default function LoginPage({ onLogin }) {
             </button>
           </form>
 
-          <div className="auth-card__footer">
+          <div className="auth-card__footer auth-stagger" style={{ '--s': 6 }}>
             <ScanSearch className="h-3.5 w-3.5" />
             <span>{t('login.cardFooter')}</span>
           </div>

@@ -1,0 +1,258 @@
+/* ══ Login page upgrade — same click-the-lamp mechanic, richer room ═══════
+   Everything here only adds to the existing .auth-* / .lamp-* rules. */
+
+@property --auth-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+/* ── The room: warm wash, perspective floor, dust ─────────────────────── */
+.auth-room {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 1400ms ease;
+}
+.auth-shell--lit .auth-room { opacity: 1; }
+
+.auth-room__wash {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 46% 52% at 24% 46%, rgba(251, 191, 36, 0.17), transparent 70%),
+    radial-gradient(ellipse 40% 45% at 86% 30%, rgba(13, 148, 136, 0.14), transparent 72%),
+    radial-gradient(ellipse 60% 30% at 50% 100%, rgba(251, 191, 36, 0.07), transparent 70%);
+}
+
+.auth-room__floor {
+  position: absolute;
+  right: -20%;
+  bottom: -2%;
+  left: -20%;
+  height: 46%;
+  background-image:
+    linear-gradient(rgba(251, 191, 36, 0.16) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(251, 191, 36, 0.12) 1px, transparent 1px);
+  background-size: 64px 64px;
+  transform: perspective(520px) rotateX(64deg);
+  transform-origin: 50% 0;
+  mask-image: radial-gradient(ellipse 55% 85% at 24% 0%, #000 0%, transparent 78%);
+  -webkit-mask-image: radial-gradient(ellipse 55% 85% at 24% 0%, #000 0%, transparent 78%);
+  animation: auth-floor-slide 14s linear infinite;
+}
+@keyframes auth-floor-slide { to { background-position: 0 64px, 64px 0; } }
+
+.auth-dust {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(253, 224, 138, 0.85);
+  box-shadow: 0 0 8px 1px rgba(251, 191, 36, 0.55);
+  opacity: 0;
+  animation: auth-dust-float 10s ease-in-out infinite;
+}
+@keyframes auth-dust-float {
+  0%   { opacity: 0;    transform: translate(0, 0); }
+  20%  { opacity: 0.9; }
+  50%  { opacity: 0.55; transform: translate(calc(var(--drift) * 0.6), calc(var(--drift) * -1)); }
+  80%  { opacity: 0.85; }
+  100% { opacity: 0;    transform: translate(calc(var(--drift) * -0.4), calc(var(--drift) * -1.8)); }
+}
+
+/* ── A beam from the lamp to the card ─────────────────────────────────── */
+.auth-ray {
+  position: absolute;
+  top: 10.2rem;
+  left: 50%;
+  z-index: 0;
+  width: min(62rem, 66vw);
+  height: 17rem;
+  background: linear-gradient(90deg, rgba(251, 191, 36, 0.24), rgba(251, 191, 36, 0.08) 55%, transparent 100%);
+  clip-path: polygon(0 46%, 100% 6%, 100% 94%, 0 54%);
+  filter: blur(7px);
+  mix-blend-mode: screen;
+  opacity: 0;
+  transform: translateY(-50%) scaleX(0.4);
+  transform-origin: 0 50%;
+  transition: opacity 900ms ease 250ms, transform 1100ms cubic-bezier(0.2, 0.8, 0.2, 1) 250ms;
+  pointer-events: none;
+}
+.auth-shell--lit .auth-ray {
+  opacity: 1;
+  transform: translateY(-50%) scaleX(1);
+}
+
+/* ── Dark state: invite the click ─────────────────────────────────────── */
+.auth-shell--dark .lamp-switch__handle {
+  animation: auth-handle-pulse 2.4s ease-in-out infinite;
+}
+@keyframes auth-handle-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0); }
+  50%      { box-shadow: 0 0 0 7px rgba(251, 191, 36, 0.22), 0 0 14px 2px rgba(251, 191, 36, 0.55); }
+}
+.auth-shell--dark .lamp-hint { animation: auth-hint-breathe 3s ease-in-out infinite; }
+@keyframes auth-hint-breathe { 50% { opacity: 0.55; } }
+
+/* ── Brand ────────────────────────────────────────────────────────────── */
+.auth-brand { z-index: 1; }
+.auth-brand__mark { position: relative; }
+.auth-brand__mark::after {
+  position: absolute;
+  inset: -6px;
+  border: 1px solid rgba(94, 234, 212, 0.35);
+  border-radius: 0.95rem;
+  content: "";
+  animation: auth-mark-ring 3.4s ease-out infinite;
+}
+@keyframes auth-mark-ring {
+  0%   { opacity: 0.8; transform: scale(0.92); }
+  100% { opacity: 0;   transform: scale(1.25); }
+}
+
+/* ── Card: glass, travelling rim light, staggered content ─────────────── */
+.auth-scene, .auth-topbar, .auth-footer { z-index: 1; }
+.auth-card { z-index: 2; }
+
+.auth-card--visible {
+  box-shadow:
+    0 2rem 5rem rgba(0, 0, 0, 0.55),
+    -2.4rem 0 5rem -2.6rem rgba(251, 191, 36, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.auth-card::after {
+  position: absolute;
+  inset: -1px;
+  padding: 1px;
+  border-radius: inherit;
+  background: conic-gradient(
+    from var(--auth-angle),
+    transparent 0 58%,
+    rgba(251, 191, 36, 0.75) 74%,
+    rgba(94, 234, 212, 0.85) 88%,
+    transparent 100%
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  content: "";
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 900ms ease 500ms;
+  animation: auth-rim 7s linear infinite;
+}
+.auth-card--visible::after { opacity: 0.95; }
+@keyframes auth-rim { to { --auth-angle: 360deg; } }
+
+.auth-card--shake { animation: auth-shake 450ms cubic-bezier(0.36, 0.07, 0.19, 0.97); }
+@keyframes auth-shake {
+  10%, 90% { transform: translateX(-2px); }
+  20%, 80% { transform: translateX(4px); }
+  30%, 50%, 70% { transform: translateX(-7px); }
+  40%, 60% { transform: translateX(7px); }
+}
+
+.auth-card--visible .auth-stagger {
+  animation: auth-rise 650ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(420ms + var(--s, 0) * 75ms);
+}
+@keyframes auth-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.auth-card__live {
+  display: inline-block;
+  width: 0.4rem;
+  height: 0.4rem;
+  margin-right: 0.3rem;
+  border-radius: 50%;
+  background: #5eead4;
+  box-shadow: 0 0 0 0 rgba(94, 234, 212, 0.6);
+  animation: auth-live 2s ease-out infinite;
+}
+@keyframes auth-live {
+  0%   { box-shadow: 0 0 0 0 rgba(94, 234, 212, 0.55); }
+  100% { box-shadow: 0 0 0 7px rgba(94, 234, 212, 0); }
+}
+
+/* ── Fields ───────────────────────────────────────────────────────────── */
+.auth-input { position: relative; display: block; }
+.auth-input__icon {
+  position: absolute;
+  top: 50%;
+  left: 0.85rem;
+  width: 1rem;
+  height: 1rem;
+  color: rgba(206, 218, 215, 0.35);
+  transform: translateY(-50%);
+  transition: color 200ms ease;
+  pointer-events: none;
+}
+.auth-input input { padding-left: 2.5rem; }
+.auth-input:focus-within .auth-input__icon { color: #fbbf24; }
+.auth-field input:focus {
+  border-color: rgba(251, 191, 36, 0.7);
+  box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.1), 0 0 1.4rem -0.4rem rgba(251, 191, 36, 0.5);
+}
+
+.auth-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.62rem;
+  letter-spacing: 0.04em;
+}
+.auth-hint--warn { color: #fbbf24; }
+
+/* Password strength meter */
+.auth-strength { display: flex; align-items: center; gap: 0.6rem; margin-top: 0.1rem; }
+.auth-strength__bars { display: flex; flex: 1; gap: 0.25rem; }
+.auth-strength__bars i {
+  height: 3px;
+  flex: 1;
+  border-radius: 3px;
+  background: rgba(130, 148, 143, 0.22);
+  transition: background 250ms ease, box-shadow 250ms ease;
+}
+.auth-strength[data-score="1"] .is-on { background: #f87171; box-shadow: 0 0 8px rgba(248, 113, 113, 0.6); }
+.auth-strength[data-score="2"] .is-on { background: #fb923c; box-shadow: 0 0 8px rgba(251, 146, 60, 0.6); }
+.auth-strength[data-score="3"] .is-on { background: #fbbf24; box-shadow: 0 0 8px rgba(251, 191, 36, 0.6); }
+.auth-strength[data-score="4"] .is-on { background: #34d399; box-shadow: 0 0 8px rgba(52, 211, 153, 0.6); }
+.auth-strength__label { min-width: 3.4rem; font-size: 0.6rem; letter-spacing: 0.06em; color: rgba(206, 218, 215, 0.6); text-align: right; }
+
+/* Submit: sheen sweep */
+.auth-submit { position: relative; overflow: hidden; }
+.auth-submit::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 30%, rgba(255, 255, 255, 0.45) 50%, transparent 70%);
+  content: "";
+  transform: translateX(-120%);
+  pointer-events: none;
+}
+.auth-submit:hover:not(:disabled)::after { transform: translateX(120%); transition: transform 700ms ease; }
+
+/* ── Small screens: no beam, calmer room ──────────────────────────────── */
+@media (max-width: 850px) {
+  .auth-ray { display: none; }
+  .auth-room__wash {
+    background:
+      radial-gradient(ellipse 80% 40% at 50% 28%, rgba(251, 191, 36, 0.17), transparent 70%),
+      radial-gradient(ellipse 70% 40% at 50% 90%, rgba(13, 148, 136, 0.12), transparent 72%);
+  }
+  .auth-room__floor { height: 34%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-room__floor, .auth-dust, .auth-brand__mark::after, .auth-card::after,
+  .auth-card__live, .auth-shell--dark .lamp-switch__handle, .auth-shell--dark .lamp-hint {
+    animation: none;
+  }
+  .auth-dust { opacity: 0.6; }
+  .auth-card--visible .auth-stagger { animation: none; }
+}
