@@ -1,0 +1,247 @@
+/* ══ Round 3 — a lamp that looks like a lamp, plus pro touches ═══════════
+   Same click-the-lamp mechanic; only the drawing and the card details change. */
+
+/* ── Lamp: metal shade, brass rim, pole that actually reaches a weighted base ── */
+.lamp-shade {
+  top: 1.2rem;
+  width: 10rem;
+  height: 4.6rem;
+  border-radius: 50% 50% 0.5rem 0.5rem / 95% 95% 0.5rem 0.5rem;
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.55) 0%, rgba(255, 255, 255, 0.1) 26%, rgba(255, 255, 255, 0) 44%, rgba(0, 0, 0, 0.45) 100%),
+    linear-gradient(180deg, #2a3534 0%, #111616 70%, #0a0d0d 100%);
+  box-shadow: inset 0 0.15rem 0 rgba(255, 255, 255, 0.07);
+}
+.lamp-button--on .lamp-shade {
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.5) 0%, rgba(255, 244, 200, 0.16) 26%, rgba(255, 255, 255, 0) 44%, rgba(0, 0, 0, 0.4) 100%),
+    linear-gradient(180deg, #5a5240 0%, #231d12 70%, #15110a 100%);
+  box-shadow: 0 0 3.5rem rgba(251, 191, 36, 0.22), inset 0 0.15rem 0 rgba(255, 238, 172, 0.2);
+}
+.lamp-shade::after {
+  right: -0.15rem;
+  bottom: -0.3rem;
+  left: -0.15rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #a07a2c, #5c4414);
+  transition: background 600ms ease, box-shadow 600ms ease;
+}
+.lamp-button--on .lamp-shade::after {
+  background: linear-gradient(180deg, #ffe08a, #c9921c);
+  box-shadow: 0 0 1rem rgba(251, 191, 36, 0.7);
+}
+
+.lamp-bulb {
+  top: 5.45rem;
+  z-index: 1;
+  width: 2.1rem;
+  height: 1.05rem;
+  border-radius: 0 0 1.2rem 1.2rem;
+}
+.lamp-button--on .lamp-bulb {
+  background: radial-gradient(ellipse at 50% 20%, #fffbe6, #fde68a 45%, #fbbf24 85%);
+}
+
+.lamp-shade__inner {
+  top: 5.9rem;
+  width: 15rem;
+  height: 17rem;
+  background: linear-gradient(180deg, rgba(255, 214, 93, 0.42), rgba(255, 190, 51, 0.1) 55%, rgba(255, 190, 51, 0));
+  clip-path: polygon(34% 0, 66% 0, 100% 100%, 0 100%);
+  filter: blur(0.5rem);
+}
+
+.lamp-neck {
+  top: 5.8rem;
+  width: 0.5rem;
+  height: 17.4rem;
+  background: linear-gradient(90deg, #0d1111, #3a4645 40%, #151b1b);
+  box-shadow: none;
+}
+.lamp-button--on .lamp-neck {
+  background: linear-gradient(90deg, #17130b, #7a6a42 40%, #1d170c);
+  box-shadow: 0 0 1.2rem rgba(251, 191, 36, 0.22);
+}
+.lamp-neck__collar {
+  position: absolute;
+  top: 42%;
+  left: 50%;
+  width: 0.95rem;
+  height: 0.55rem;
+  border-radius: 0.2rem;
+  background: linear-gradient(90deg, #5c4414, #d7a948 45%, #5c4414);
+  transform: translateX(-50%);
+}
+
+.lamp-base {
+  bottom: 0.9rem;
+  width: 7.4rem;
+  height: 1.3rem;
+  border-radius: 3.7rem 3.7rem 0.5rem 0.5rem / 1.3rem 1.3rem 0.4rem 0.4rem;
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.5), rgba(255, 255, 255, 0.1) 30%, rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0.4)),
+    linear-gradient(180deg, #2a3534, #0c1010);
+  box-shadow: 0 0.35rem 0.8rem rgba(0, 0, 0, 0.6);
+}
+.lamp-button--on .lamp-base {
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.5), rgba(255, 238, 172, 0.2) 30%, rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0.4)),
+    linear-gradient(180deg, #4d4430, #15110a);
+  box-shadow: 0 0 2rem rgba(251, 191, 36, 0.2), 0 0.35rem 0.8rem rgba(0, 0, 0, 0.6);
+}
+.lamp-reflection {
+  position: absolute;
+  bottom: -0.1rem;
+  left: 50%;
+  width: 5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  opacity: 0;
+  transform: translateX(-50%);
+  transition: opacity 800ms ease;
+}
+.lamp-button--on .lamp-reflection {
+  background: radial-gradient(ellipse, rgba(251, 191, 36, 0.45), transparent 70%);
+  opacity: 1;
+}
+
+.lamp-switch { top: 6.1rem; left: calc(50% + 3.1rem); }
+.lamp-switch__cord { height: 2.6rem; background: linear-gradient(#8a7a52, #56605d); }
+.lamp-switch__handle {
+  width: 0.65rem;
+  height: 0.65rem;
+  background: radial-gradient(circle at 35% 30%, #f1d58a, #9a7420);
+}
+.lamp-button--on .lamp-switch__handle {
+  background: radial-gradient(circle at 35% 30%, #fff3c4, #f5ca5d);
+}
+
+.lamp-floor { width: 22rem; height: 3rem; }
+
+/* Softer, longer beam toward the card */
+.auth-ray {
+  top: 10.6rem;
+  height: 20rem;
+  background: linear-gradient(90deg, rgba(251, 191, 36, 0.2), rgba(251, 191, 36, 0.06) 60%, transparent 100%);
+  clip-path: polygon(0 47%, 100% 0, 100% 100%, 0 53%);
+  filter: blur(14px);
+}
+
+/* ── Product chips under the brand ───────────────────────────────────── */
+.auth-chips {
+  position: absolute;
+  top: 9.6rem;
+  left: 0;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  opacity: 0;
+  transform: translateY(-0.4rem);
+  transition: opacity 700ms ease 600ms, transform 700ms ease 600ms;
+}
+.auth-shell--lit .auth-chips { opacity: 1; transform: translateY(0); }
+.auth-chips li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.28rem 0.6rem;
+  border: 1px solid rgba(94, 234, 212, 0.2);
+  border-radius: 999px;
+  color: rgba(206, 218, 215, 0.7);
+  background: rgba(94, 234, 212, 0.05);
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.auth-chips svg { color: #5eead4; }
+
+/* ── Card: light that follows the pointer ────────────────────────────── */
+.auth-card { --mx: 50%; --my: 0px; }
+.auth-card__glow {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(380px circle at var(--mx) var(--my), rgba(251, 191, 36, 0.09), transparent 65%);
+  pointer-events: none;
+}
+.auth-card__header, .auth-tabs, .auth-form, .auth-card__footer { position: relative; }
+
+/* ── Remember me ─────────────────────────────────────────────────────── */
+.auth-remember {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-top: -0.2rem;
+  color: rgba(206, 218, 215, 0.6);
+  font-size: 0.74rem;
+  cursor: pointer;
+  user-select: none;
+}
+.auth-remember input { position: absolute; opacity: 0; pointer-events: none; }
+.auth-remember__box {
+  display: grid;
+  width: 1rem;
+  height: 1rem;
+  place-items: center;
+  border: 1px solid rgba(130, 148, 143, 0.45);
+  border-radius: 0.3rem;
+  background: rgba(3, 7, 7, 0.78);
+  transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+.auth-remember__box::after {
+  width: 0.28rem;
+  height: 0.5rem;
+  margin-top: -0.12rem;
+  border: solid #07100f;
+  border-width: 0 2px 2px 0;
+  content: "";
+  opacity: 0;
+  transform: rotate(45deg) scale(0.6);
+  transition: opacity 150ms ease, transform 150ms ease;
+}
+.auth-remember input:checked + .auth-remember__box {
+  border-color: #fbbf24;
+  background: #fbbf24;
+  box-shadow: 0 0 0.9rem -0.1rem rgba(251, 191, 36, 0.7);
+}
+.auth-remember input:checked + .auth-remember__box::after { opacity: 1; transform: rotate(45deg) scale(1); }
+.auth-remember input:focus-visible + .auth-remember__box { outline: 2px solid #5eead4; outline-offset: 2px; }
+
+/* ── Footer: live detection ticker ───────────────────────────────────── */
+.auth-card__footer { flex-direction: column; gap: 0.6rem; }
+.auth-ticker {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.7rem;
+  border: 1px solid rgba(130, 148, 143, 0.14);
+  border-radius: 0.5rem;
+  background: rgba(3, 7, 7, 0.6);
+  color: rgba(206, 218, 215, 0.5);
+  animation: auth-tick-in 420ms ease both;
+}
+.auth-ticker i { width: 0.45rem; height: 0.45rem; border-radius: 50%; }
+.auth-ticker b { color: #eef7f4; font-weight: 500; letter-spacing: 0.04em; }
+.auth-ticker em { color: #5eead4; font-style: normal; }
+@keyframes auth-tick-in {
+  from { opacity: 0; transform: translateY(5px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.auth-card__tag { display: flex; align-items: center; gap: 0.4rem; }
+
+@media (max-width: 850px) {
+  .auth-chips { top: 8.6rem; left: 50%; justify-content: center; width: 20rem; transform: translate(-50%, -0.4rem); }
+  .auth-shell--lit .auth-chips { transform: translate(-50%, 0); }
+}
+@media (max-width: 520px) { .auth-chips { display: none; } }
+@media (prefers-reduced-motion: reduce) { .auth-ticker { animation: none; } }
+
+@media (max-width: 850px) {
+  .lamp-stage { min-height: 31rem; }
+}

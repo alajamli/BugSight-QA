@@ -12,6 +12,7 @@ import './index.css';
 import './design.css';
 import './dashboard.css';
 import './login.css';
+import './login-lamp.css';
 import App from './App.jsx';
 import { ThemeProvider } from './ThemeContext.jsx';
 import { I18nProvider } from './i18n.jsx';

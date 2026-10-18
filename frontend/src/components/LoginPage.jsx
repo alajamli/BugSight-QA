@@ -12,10 +12,14 @@ import {
   Lock,
   User,
   TriangleAlert,
+  Cpu,
+  Layers,
+  ShieldCheck,
 } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 import LanguageToggle from './LanguageToggle';
 import { useI18n } from '../i18n';
+import { CLASS_COLORS } from '../classColors';
 
 // 0-4: length, upper+lower, digit, symbol
 function passwordScore(value) {
@@ -27,6 +31,18 @@ function passwordScore(value) {
   if (/[^A-Za-z0-9]/.test(value) || value.length >= 14) score += 1;
   return score;
 }
+
+// What the card footer "scans" while the lamp is on: real defect classes with plausible confidences.
+const SCAN_FEED = [
+  ['z_fighting', 0.94],
+  ['missing_texture', 0.91],
+  ['screen_tear', 0.88],
+  ['uv_stretch', 0.86],
+  ['texture_glitch', 0.92],
+  ['color_corruption', 0.89],
+];
+
+const REMEMBER_KEY = 'bugsight_remember_email';
 
 const STRENGTH_KEYS = ['', 'login.strengthWeak', 'login.strengthFair', 'login.strengthGood', 'login.strengthStrong'];
 
@@ -50,7 +66,14 @@ function useDust(count = 26) {
 export default function LoginPage({ onLogin }) {
   const { t, tError } = useI18n();
   const [mode, setMode] = useState('login');
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(() => {
+    try { return localStorage.getItem(REMEMBER_KEY) || ''; } catch { return ''; }
+  });
+  const [remember, setRemember] = useState(() => {
+    try { return Boolean(localStorage.getItem(REMEMBER_KEY)); } catch { return false; }
+  });
+  const [scanIndex, setScanIndex] = useState(0);
+  const cardRef = useRef(null);
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -80,6 +103,33 @@ export default function LoginPage({ onLogin }) {
     const timer = setTimeout(() => (mode === 'register' ? nameRef : emailRef).current?.focus(), 900);
     return () => clearTimeout(timer);
   }, [isLit, mode]);
+
+  // Cycle the footer ticker while the lamp is on.
+  useEffect(() => {
+    if (!isLit) return undefined;
+    const timer = setInterval(() => setScanIndex((i) => (i + 1) % SCAN_FEED.length), 2200);
+    return () => clearInterval(timer);
+  }, [isLit]);
+
+  // Press L (outside a field) to pull the lamp cord from the keyboard.
+  useEffect(() => {
+    const onKey = (event) => {
+      if (event.key.toLowerCase() !== 'l' || event.ctrlKey || event.metaKey || event.altKey) return;
+      if (/^(INPUT|TEXTAREA|SELECT)$/.test(event.target.tagName)) return;
+      handleLampToggle();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
+
+  // The card catches the lamp's light where the pointer is (CSS vars, no re-render).
+  const handleCardPointer = (event) => {
+    const el = cardRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    el.style.setProperty('--mx', `${event.clientX - rect.left}px`);
+    el.style.setProperty('--my', `${event.clientY - rect.top}px`);
+  };
 
   const failWith = (value) => {
     setError(value);
@@ -113,6 +163,10 @@ export default function LoginPage({ onLogin }) {
         });
       }
 
+      try {
+        if (remember) localStorage.setItem(REMEMBER_KEY, email);
+        else localStorage.removeItem(REMEMBER_KEY);
+      } catch { /* storage unavailable: nothing to remember */ }
       localStorage.setItem('bugsight_token', data.token);
       if (data.refresh_token) {
         localStorage.setItem('bugsight_refresh_token', data.refresh_token);
@@ -182,10 +236,15 @@ export default function LoginPage({ onLogin }) {
           </div>
         </div>
 
+        <ul className="auth-chips" aria-hidden={!isLit}>
+          <li><Cpu className="h-3 w-3" /> {t('login.chipModel')}</li>
+          <li><Layers className="h-3 w-3" /> {t('login.chipClasses')}</li>
+          <li><ShieldCheck className="h-3 w-3" /> {t('login.chipSecure')}</li>
+        </ul>
+
         <div className="lamp-stage">
           <div className="lamp-halo" aria-hidden="true" />
           <div className="lamp-floor" aria-hidden="true" />
-          <div className="auth-ray" aria-hidden="true" />
           <button
             type="button"
             className={`lamp-button ${isLit ? 'lamp-button--on' : ''} ${pulling ? 'lamp-button--pulling' : ''}`}
@@ -197,12 +256,15 @@ export default function LoginPage({ onLogin }) {
               <span className="lamp-shade__inner" />
             </span>
             <span className="lamp-bulb" />
-            <span className="lamp-neck" />
+            <span className="lamp-neck">
+              <span className="lamp-neck__collar" />
+            </span>
             <span className="lamp-switch">
               <span className="lamp-switch__cord" />
               <span className="lamp-switch__handle" />
             </span>
             <span className="lamp-base" />
+            <span className="lamp-reflection" />
           </button>
 
           <p className="lamp-hint">
@@ -212,11 +274,14 @@ export default function LoginPage({ onLogin }) {
         </div>
 
         <section
+          ref={cardRef}
+          onPointerMove={handleCardPointer}
           className={`auth-card ${isLit ? 'auth-card--visible' : ''} ${shake ? 'auth-card--shake' : ''}`}
           aria-hidden={!isLit}
           // keeps the hidden form out of the tab order until the lamp is on
           {...(isLit ? {} : { inert: '' })}
         >
+          <div className="auth-card__glow" aria-hidden="true" />
           <div className="auth-card__header auth-stagger" style={{ '--s': 0 }}>
             <div className="auth-card__icon">
               <Lightbulb className="h-5 w-5" />
@@ -332,6 +397,14 @@ export default function LoginPage({ onLogin }) {
               )}
             </label>
 
+            {mode === 'login' && (
+              <label className="auth-remember auth-stagger" style={{ '--s': 5 }}>
+                <input type="checkbox" checked={remember} onChange={(event) => setRemember(event.target.checked)} />
+                <span className="auth-remember__box" aria-hidden="true" />
+                {t('login.rememberMe')}
+              </label>
+            )}
+
             {error && (
               <div className="auth-error" role="alert">
                 <span className="auth-error__bar" />
@@ -339,7 +412,7 @@ export default function LoginPage({ onLogin }) {
               </div>
             )}
 
-            <button type="submit" className="auth-submit auth-stagger" style={{ '--s': 5 }} disabled={loading}>
+            <button type="submit" className="auth-submit auth-stagger" style={{ '--s': 6 }} disabled={loading}>
               {loading ? (
                 <><Loader2 className="h-4 w-4 animate-spin" /> {t('login.wait')}</>
               ) : mode === 'login' ? (
@@ -350,9 +423,17 @@ export default function LoginPage({ onLogin }) {
             </button>
           </form>
 
-          <div className="auth-card__footer auth-stagger" style={{ '--s': 6 }}>
-            <ScanSearch className="h-3.5 w-3.5" />
-            <span>{t('login.cardFooter')}</span>
+          <div className="auth-card__footer auth-stagger" style={{ '--s': 7 }}>
+            <div className="auth-ticker" aria-hidden="true" key={scanIndex}>
+              <i style={{ background: CLASS_COLORS[SCAN_FEED[scanIndex][0]], boxShadow: `0 0 8px ${CLASS_COLORS[SCAN_FEED[scanIndex][0]]}` }} />
+              <span>{t('login.scanning')}</span>
+              <b>{SCAN_FEED[scanIndex][0]}</b>
+              <em>{SCAN_FEED[scanIndex][1].toFixed(2)}</em>
+            </div>
+            <div className="auth-card__tag">
+              <ScanSearch className="h-3.5 w-3.5" />
+              <span>{t('login.cardFooter')}</span>
+            </div>
           </div>
         </section>
       </div>

@@ -61,6 +61,11 @@ export default {
   'login.strengthFair': 'Moyen',
   'login.strengthGood': 'Bon',
   'login.strengthStrong': 'Fort',
+  'login.chipModel': 'Détecteur YOLOv8',
+  'login.chipClasses': '6 classes de défauts',
+  'login.chipSecure': 'Sécurisé par JWT',
+  'login.rememberMe': 'Se souvenir de mon e-mail',
+  'login.scanning': 'Analyse de la frame',
   'login.authFailed': 'Échec de l’authentification',
 
   'upload.title': 'Analyser une capture',

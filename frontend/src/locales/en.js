@@ -62,6 +62,11 @@ export default {
   'login.strengthFair': 'Fair',
   'login.strengthGood': 'Good',
   'login.strengthStrong': 'Strong',
+  'login.chipModel': 'YOLOv8 detector',
+  'login.chipClasses': '6 defect classes',
+  'login.chipSecure': 'JWT-secured',
+  'login.rememberMe': 'Remember my email',
+  'login.scanning': 'Scanning frame',
   'login.authFailed': 'Authentication failed',
 
   'upload.title': 'Analyze a Screenshot',
