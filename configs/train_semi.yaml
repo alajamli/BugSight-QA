@@ -1,0 +1,64 @@
+# BugSight QA - YOLOv8 training on the semi-synthetic dataset
+#
+# Dataset: data/processed_semi (python scripts/download_backgrounds.py, then
+# python scripts/generate_semi_synthetic.py): the six defects drawn on real
+# gameplay screenshots (640x360) from 10 games, ~30% clean frames as hard
+# negatives.
+#
+# Same augmentation reasoning as configs/train.yaml (no hue shift, no mixup,
+# no erasing). Differences:
+#   * imgsz 640: screenshots are 640 wide and tears / z-fighting stripes are
+#     only a few pixels tall, downscaling to 512 blurs them away
+#   * more epochs: real backgrounds are much harder than flat synthetic scenes
+# On a GPU (Colab / Kaggle T4) pass --device 0 and consider yolov8s.pt.
+
+model:
+  weights: yolov8n.pt
+  task: detect
+
+data:
+  yaml: data/processed_semi/data.yaml
+
+train:
+  epochs: 60
+  imgsz: 640
+  batch: 16
+  patience: 20
+  optimizer: AdamW
+  lr0: 0.002
+  lrf: 0.02
+  momentum: 0.937
+  weight_decay: 0.0005
+  warmup_epochs: 2
+  warmup_momentum: 0.8
+  box: 7.5
+  cls: 0.7
+  dfl: 1.5
+
+augment:
+  hsv_h: 0.0
+  hsv_s: 0.3
+  hsv_v: 0.3
+  degrees: 0.0
+  translate: 0.1
+  scale: 0.3
+  fliplr: 0.5
+  mosaic: 1.0
+  mixup: 0.0
+
+extra:
+  cos_lr: true
+  close_mosaic: 10
+  flipud: 0.0
+  erasing: 0.0
+  cache: ram
+  plots: true
+
+output:
+  project: runs
+  name: bugsight_yolov8n_semi
+  exist_ok: false
+
+device: "cpu"
+workers: 2
+seed: 42

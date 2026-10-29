@@ -35,8 +35,13 @@ _RUNS_DIR = Path(__file__).resolve().parents[2] / "runs" / "detect" / "runs"
 
 
 def _default_weights() -> str:
-    """Newest trained model (v2 preferred), falling back to the v1 baseline."""
-    for name in ("bugsight_yolov8n_v2", "bugsight_yolov8n"):
+    """Newest trained model (semi-synthetic, then v2), falling back to the v1 baseline."""
+    for name in (
+        "bugsight_yolov8s_semi",
+        "bugsight_yolov8n_semi",
+        "bugsight_yolov8n_v2",
+        "bugsight_yolov8n",
+    ):
         candidate = _RUNS_DIR / name / "weights" / "best.pt"
         if candidate.exists():
             return str(candidate)

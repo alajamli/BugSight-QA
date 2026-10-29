@@ -62,6 +62,28 @@ python scripts/train.py --config configs/train_gpu.yaml  # CUDA GPU / Colab T4 (
 python scripts/evaluate.py                          # per-class report for the newest weights
 ```
 
+- **Semi-synthetic dataset (recommended):** the same six defects drawn on real
+  gameplay screenshots, so the model learns real game textures instead of flat
+  rectangles.
+
+  ```bash
+  python scripts/download_backgrounds.py        # 2000 screenshots, 10 games -> data/backgrounds
+  python scripts/generate_semi_synthetic.py     # -> data/processed_semi
+  python scripts/train.py --config configs/train_semi.yaml
+  ```
+
+  On Colab (free T4 GPU, ~20-30 min): `python scripts/make_colab_bundle.py`, upload
+  `dist/bugsight_colab.zip` to the root of Google Drive, open
+  `notebooks/train_colab.ipynb` in Colab and run all cells. It trains with
+  `configs/train_semi_gpu.yaml` (YOLOv8s) and returns the run folder to drop into
+  `runs/detect/runs/`.
+
+  Backgrounds come from [Bingsu/Gameplay_Images](https://huggingface.co/datasets/Bingsu/Gameplay_Images)
+  (CC-BY-4.0). Defects follow irregular shapes (a flood-filled surface or a blob),
+  keep the scene lighting, and the whole frame gets capture artefacts (JPEG,
+  blur, noise, exposure). Each screenshot belongs to one split only;
+  `--holdout-games minecraft terraria` keeps whole games for the test split to
+  measure generalisation to unseen games.
 - **Why a new dataset generator:** every defect is drawn visibly inside its box and
   checked against the clean scene. The previous data labelled `screen_tear` and
   `uv_stretch` over regions that looked identical to the background, which capped

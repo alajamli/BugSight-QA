@@ -12,7 +12,7 @@ PIP := $(VENV_BIN)/pip
 RUFF := $(VENV_BIN)/ruff
 
 .DEFAULT_GOAL := help
-.PHONY: help install data train evaluate serve frontend test lint format check-i18n ci docker docker-down clean
+.PHONY: help install data data-semi train train-semi evaluate serve frontend test lint format check-i18n ci docker docker-down clean
 
 help:  ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}'
@@ -25,6 +25,13 @@ install:  ## Create venv and install dependencies
 
 data:  ## Generate the six-class synthetic dataset (1500 images) in data/processed_v2
 	$(PYTHON) scripts/generate_dataset.py --n-images 1500 --output data/processed_v2
+
+data-semi:  ## Download real screenshots and build the semi-synthetic dataset in data/processed_semi
+	$(PYTHON) scripts/download_backgrounds.py --per-game 200 --output data/backgrounds
+	$(PYTHON) scripts/generate_semi_synthetic.py --backgrounds data/backgrounds --output data/processed_semi
+
+train-semi:  ## Train on the semi-synthetic dataset
+	$(PYTHON) scripts/train.py --config configs/train_semi.yaml
 
 train:  ## Train the YOLOv8 model
 	$(PYTHON) scripts/train.py --config configs/train.yaml
