@@ -64,6 +64,9 @@ class Prediction(db.Model):
     # large) and only read by the PDF report, so each user gets their own
     # latest video instead of a process-wide shared one.
     video_frames_json = db.Column(db.Text, nullable=True)
+    # Confidence threshold the analysis ran with (shown in the PDF report).
+    # Null for analyses saved before the column existed.
+    confidence_threshold = db.Column(db.Float, nullable=True)
     timestamp = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), index=True)
 
     def to_dict(self) -> dict:
@@ -80,6 +83,7 @@ class Prediction(db.Model):
             "image_width": self.image_width,
             "image_height": self.image_height,
             "media_type": self.media_type or "image",
+            "confidence_threshold": self.confidence_threshold,
             "video_summary": json.loads(self.video_summary_json)
             if self.video_summary_json
             else None,
@@ -92,6 +96,9 @@ def _add_missing_columns() -> None:
     existing = {c["name"] for c in inspector.get_columns("predictions")}
     if "video_frames_json" not in existing:
         db.session.execute(db.text("ALTER TABLE predictions ADD COLUMN video_frames_json TEXT"))
+        db.session.commit()
+    if "confidence_threshold" not in existing:
+        db.session.execute(db.text("ALTER TABLE predictions ADD COLUMN confidence_threshold FLOAT"))
         db.session.commit()
     indexes = {i["name"] for i in inspector.get_indexes("predictions")}
     if "ix_predictions_timestamp" not in indexes:

@@ -1,10 +1,11 @@
 import { lazy, Suspense, useState, useEffect, useCallback } from 'react';
-import { Bug, Activity, FileDown } from 'lucide-react';
+import { Bug, Activity } from 'lucide-react';
 import { api } from './api';
 import LoginPage from './components/LoginPage';
 import AnalyzePanel from './components/AnalyzePanel';
 import KpiStrip from './components/KpiStrip';
 import UserMenu from './components/UserMenu';
+import ReportMenu from './components/ReportMenu';
 import ResultViewer from './components/ResultViewer';
 import HistoryTable from './components/HistoryTable';
 import ThemeToggle from './components/ThemeToggle';
@@ -117,10 +118,10 @@ export default function App() {
     refreshData();
   };
 
-  const handleDownloadReport = async () => {
+  const handleDownloadReport = async (options) => {
     setReportLoading(true);
     try {
-      await api.report(videoResult, lang);
+      await api.report(options, lang);
     } catch (e) {
       toast.error({ key: 'app.reportFailed' });
     } finally {
@@ -184,19 +185,7 @@ export default function App() {
             </div>
 
             <div className="flex items-center gap-1.5 sm:gap-3">
-              <button
-                onClick={handleDownloadReport}
-                disabled={reportLoading}
-                className="btn-primary btn-primary--auto !rounded-lg !px-3.5 !py-2"
-              >
-                {reportLoading ? (
-                  <span className="bs-mono">{t('app.generating')}</span>
-                ) : (
-                  <>
-                    <FileDown className="w-4 h-4" /> <span className="hidden sm:inline">{t('app.reportPdf')}</span>
-                  </>
-                )}
-              </button>
+              <ReportMenu loading={reportLoading} onDownload={handleDownloadReport} refreshKey={historyKey} />
               <LanguageToggle />
               <ThemeToggle />
               <UserMenu user={user} onAdmin={() => setAdminMode(true)} onLogout={handleLogout} />

@@ -100,9 +100,11 @@ export const api = {
     client.patch(`/admin/users/${userId}/role`, { role }).then(r => r.data),
   adminDeleteUser: (userId) => client.delete(`/admin/users/${userId}`).then(r => r.data),
 
-  report: (videoResult = null, lang = 'en') => {
-    const params = new URLSearchParams({ lang });
-    if (videoResult) params.set('include_video', 'true');
+  // type: 'image' | 'video' | 'all'; videoId picks one video (default: latest).
+  report: ({ type = 'all', videoId = null, includeVideo = false } = {}, lang = 'en') => {
+    const params = new URLSearchParams({ lang, type });
+    if (videoId) params.set('video_id', videoId);
+    if (includeVideo) params.set('include_video', 'true');
     const url = `/report?${params}`;
     // Routed through the axios `client` (not raw fetch) so the 401 -> silent
     // refresh -> retry interceptor above also covers this call.
@@ -110,7 +112,7 @@ export const api = {
       const blobUrl = URL.createObjectURL(r.data);
       const a = document.createElement('a');
       a.href = blobUrl;
-      a.download = `bugsight_report.pdf`;
+      a.download = `bugsight_report_${type}.pdf`;
       a.click();
       URL.revokeObjectURL(blobUrl);
     });

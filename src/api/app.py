@@ -107,6 +107,46 @@ def _ext_allowed(filename: str, allowed: set[str]) -> bool:
     return Path(filename).suffix.lower() in allowed
 
 
+# BGR colours for the boxes drawn on report thumbnails, one per class.
+_CLASS_COLOURS = {
+    "missing_texture": (203, 0, 255),
+    "texture_glitch": (0, 165, 255),
+    "z_fighting": (255, 200, 0),
+    "screen_tear": (255, 120, 60),
+    "uv_stretch": (90, 200, 60),
+    "color_corruption": (80, 80, 240),
+}
+THUMBNAIL_MAX_SIDE = 640
+# Key frames stored per video (one per incident, i.e. run of consecutive
+# problematic frames); later incidents are still listed in the report.
+MAX_KEYFRAMES = 20
+
+
+def _encode_jpeg(image: np.ndarray) -> bytes | None:
+    ok, buf = cv2.imencode(".jpg", image, [cv2.IMWRITE_JPEG_QUALITY, 85])
+    return buf.tobytes() if ok else None
+
+
+def _annotated_thumbnail(image: np.ndarray, detections: list[dict]) -> np.ndarray:
+    """Downscaled copy of ``image`` with each detection's box and label drawn on it."""
+    h, w = image.shape[:2]
+    scale = min(1.0, THUMBNAIL_MAX_SIDE / max(h, w))
+    thumb = cv2.resize(image, (max(1, int(w * scale)), max(1, int(h * scale))))
+    for index, det in enumerate(detections, 1):
+        box = det.get("bbox_xyxy") or []
+        if len(box) != 4:
+            continue
+        x1, y1, x2, y2 = (int(round(v * scale)) for v in box)
+        colour = _CLASS_COLOURS.get(det.get("class_name"), (255, 255, 255))
+        cv2.rectangle(thumb, (x1, y1), (x2, y2), colour, 2)
+        label = f"{index} {det.get('class_name', '')} {det.get('confidence', 0) * 100:.0f}%"
+        (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.45, 1)
+        ty = max(th + 4, y1)
+        cv2.rectangle(thumb, (x1, ty - th - 4), (x1 + tw + 4, ty), colour, -1)
+        cv2.putText(thumb, label, (x1 + 2, ty - 3), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 0), 1)
+    return thumb
+
+
 def _video_meta(path: str) -> tuple[int, float]:
     """Return (frame_count, fps); frame_count is 0 when the container does not say."""
     cap = cv2.VideoCapture(path)
@@ -202,6 +242,15 @@ def create_app(state: AppState | None = None, config_overrides: dict | None = No
     )
     if config_overrides:
         app.config.update(config_overrides)
+    # Annotated thumbnails of image analyses, used as evidence in the PDF
+    # report. Tests get a throwaway folder so they never write next to the
+    # real database.
+    if not app.config.get("MEDIA_DIR"):
+        app.config["MEDIA_DIR"] = (
+            tempfile.mkdtemp(prefix="bugsight-media-")
+            if app.config.get("TESTING")
+            else os.environ.get("BUGSIGHT_MEDIA_DIR") or str(Path(app.instance_path) / "media")
+        )
 
     # A known/placeholder signing secret lets anyone forge admin tokens, so
     # refuse to boot with one in production (gunicorn sets FLASK_ENV=production
@@ -249,6 +298,22 @@ def create_app(state: AppState | None = None, config_overrides: dict | None = No
         storage_uri="memory://",
         default_limits_exempt_when=lambda: app.config.get("TESTING", False),
     )
+
+    def _thumbnail_path(prediction_id: int) -> Path:
+        return Path(app.config["MEDIA_DIR"]) / f"{prediction_id}.jpg"
+
+    def _keyframe_path(prediction_id: int, incident: int) -> Path:
+        return Path(app.config["MEDIA_DIR"]) / f"{prediction_id}_k{incident}.jpg"
+
+    def _remove_thumbnail(prediction_id: int) -> None:
+        """Delete the thumbnail of an image analysis or the key frames of a video."""
+        paths = [_thumbnail_path(prediction_id)]
+        paths += Path(app.config["MEDIA_DIR"]).glob(f"{prediction_id}_k*.jpg")
+        for path in paths:
+            try:
+                path.unlink(missing_ok=True)
+            except OSError:
+                logger.warning("Could not delete %s", path)
 
     def admin_required(view):
         """Allow access only to an authenticated user whose role is admin."""
@@ -428,8 +493,8 @@ def create_app(state: AppState | None = None, config_overrides: dict | None = No
         )
         return max(candidates, key=lambda p: p.stat().st_mtime, default=None)
 
-    @app.get("/api/metrics")
-    def metrics():
+    def _model_metrics() -> dict:
+        """Last-epoch validation metrics of the loaded model (from its results.csv)."""
         import csv
 
         # Re-parse only when the file changed, instead of walking the disk and
@@ -437,15 +502,15 @@ def create_app(state: AppState | None = None, config_overrides: dict | None = No
         try:
             path = _find_results_csv()
             if path is None:
-                return jsonify(_EMPTY_METRICS)
+                return _EMPTY_METRICS
             mtime = path.stat().st_mtime
             cached = _metrics_cache.get("entry")
             if cached and cached[0] == (str(path), mtime):
-                return jsonify(cached[1])
+                return cached[1]
             with open(path, newline="") as f:
                 rows = list(csv.DictReader(f))
             if not rows:
-                return jsonify(_EMPTY_METRICS)
+                return _EMPTY_METRICS
             last = {k.strip(): v for k, v in rows[-1].items()}
 
             def _f(key):
@@ -463,10 +528,14 @@ def create_app(state: AppState | None = None, config_overrides: dict | None = No
                 "class_names": BUG_CLASSES,
             }
             _metrics_cache["entry"] = ((str(path), mtime), body)
-            return jsonify(body)
+            return body
         except Exception as e:
             logger.warning(f"results.csv error: {e}")
-            return jsonify(_EMPTY_METRICS)
+            return _EMPTY_METRICS
+
+    @app.get("/api/metrics")
+    def metrics():
+        return jsonify(_model_metrics())
 
     # ── Predict (image) ────────────────────────────────────
 
@@ -503,9 +572,21 @@ def create_app(state: AppState | None = None, config_overrides: dict | None = No
                 detections_json=json.dumps(detections),
                 image_width=w,
                 image_height=h,
+                confidence_threshold=conf,
             )
             db.session.add(record)
             db.session.commit()
+            try:
+                path = _thumbnail_path(record.id)
+                path.parent.mkdir(parents=True, exist_ok=True)
+                cv2.imwrite(
+                    str(path),
+                    _annotated_thumbnail(image, detections),
+                    [cv2.IMWRITE_JPEG_QUALITY, 85],
+                )
+            except Exception:
+                # The analysis itself succeeded; the report just shows no picture.
+                logger.exception("Could not save the thumbnail of analysis %s", record.id)
             return jsonify(record.to_dict())
         except RuntimeError as e:
             return jsonify({"error": str(e)}), 503
@@ -548,21 +629,46 @@ def create_app(state: AppState | None = None, config_overrides: dict | None = No
             total_frames, fps = _video_meta(tmp_path)
 
             frames_results = []
+            # One key frame per incident: the most confident frame of each run
+            # of consecutive problematic frames, annotated like image thumbnails.
+            incidents: list[dict] = []
+            track: dict = {"current": None, "size": None}
+
+            def _close_incident():
+                if track["current"] is not None:
+                    incidents.append(track["current"])
+                    track["current"] = None
 
             def _flush(batch):
                 if not batch:
                     return
                 all_detections = state.predict_batch([f for _, f in batch], conf=conf)
-                for (frame_idx, _), detections in zip(batch, all_detections, strict=True):
+                for (frame_idx, frame), detections in zip(batch, all_detections, strict=True):
+                    timestamp = round(frame_idx / fps, 2)
+                    track["size"] = frame.shape[:2]
                     frames_results.append(
                         {
                             "frame": len(frames_results),
-                            "timestamp": round(frame_idx / fps, 2),
+                            "timestamp": timestamp,
                             "has_bug": len(detections) > 0,
                             "num_detections": len(detections),
                             "detections": detections,
                         }
                     )
+                    if not detections:
+                        _close_incident()
+                        continue
+                    score = max(d["confidence"] for d in detections)
+                    current = track["current"]
+                    if current is None or score > current["confidence"]:
+                        keep_image = len(incidents) < MAX_KEYFRAMES
+                        track["current"] = {
+                            "timestamp": timestamp,
+                            "confidence": score,
+                            "jpeg": _encode_jpeg(_annotated_thumbnail(frame, detections))
+                            if keep_image
+                            else None,
+                        }
 
             batch = []
             for item in _iter_sampled_frames(tmp_path, max_frames, total_frames):
@@ -571,6 +677,7 @@ def create_app(state: AppState | None = None, config_overrides: dict | None = No
                     _flush(batch)
                     batch = []
             _flush(batch)
+            _close_incident()
         except RuntimeError as e:
             return jsonify({"error": str(e)}), 503
         except Exception:
@@ -606,6 +713,11 @@ def create_app(state: AppState | None = None, config_overrides: dict | None = No
             "fps": round(fps, 1),
             "duration": round(total_frames / fps, 1) if fps else 0,
             "class_distribution": class_counts,
+            "height": track["size"][0] if track["size"] else None,
+            "width": track["size"][1] if track["size"] else None,
+            "keyframes": [
+                {"timestamp": i["timestamp"], "confidence": i["confidence"]} for i in incidents
+            ],
         }
 
         # Frames are persisted with the analysis (per user) so the PDF report can
@@ -616,11 +728,21 @@ def create_app(state: AppState | None = None, config_overrides: dict | None = No
             has_bug=buggy_frames > 0,
             num_detections=total_detections,
             media_type="video",
+            confidence_threshold=conf,
             video_summary_json=json.dumps(video_summary),
             video_frames_json=json.dumps(frames_results),
         )
         db.session.add(record)
         db.session.commit()
+        for number, incident in enumerate(incidents, 1):
+            if not incident["jpeg"]:
+                continue
+            try:
+                path = _keyframe_path(record.id, number)
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(incident["jpeg"])
+            except OSError:
+                logger.exception("Could not save key frame %s of video %s", number, record.id)
 
         return jsonify({**video_summary, "frames": frames_results, "id": record.to_dict()["id"]})
 
@@ -675,9 +797,12 @@ def create_app(state: AppState | None = None, config_overrides: dict | None = No
             return jsonify({"error": "User not found"}), 404
         if target.id == int(get_jwt_identity()):
             return jsonify({"error": "You cannot delete your own account"}), 400
+        removed_ids = [p.id for p in Prediction.query.filter_by(user_id=target.id)]
         Prediction.query.filter_by(user_id=target.id).delete(synchronize_session=False)
         db.session.delete(target)
         db.session.commit()
+        for prediction_id in removed_ids:
+            _remove_thumbnail(prediction_id)
         return jsonify({"deleted": True, "user_id": user_id})
 
     @app.get("/api/admin/analyses")
@@ -758,6 +883,7 @@ def create_app(state: AppState | None = None, config_overrides: dict | None = No
             return jsonify({"error": "Analysis not found"}), 404
         db.session.delete(record)
         db.session.commit()
+        _remove_thumbnail(record.id)
         return jsonify({"deleted": True, "id": pred_id})
 
     # ── Stats ──────────────────────────────────────────────
@@ -773,53 +899,98 @@ def create_app(state: AppState | None = None, config_overrides: dict | None = No
     @app.get("/api/report")
     @jwt_required()
     def download_report():
+        """PDF report of the caller's analyses.
+
+        Query params: lang (fr|en), type (all|image|video, default all),
+        video_id (pred_000012 or 12; default: the latest video) and, for
+        type=all, include_video=true to add a video. Images and videos are
+        always counted separately.
+        """
         from src.api.report_generator import generate_report
 
         user_id = int(get_jwt_identity())
         user = db.session.get(User, user_id)
-        preds = (
-            Prediction.query.filter_by(user_id=user_id)
-            .order_by(Prediction.timestamp.desc())
-            .limit(100)
-            .all()
-        )
+        report_type = request.args.get("type", "all").lower()
+        if report_type not in {"all", "image", "video"}:
+            return jsonify({"error": "type must be all, image or video"}), 400
 
-        stats_data = {
-            "total_analyses": len(preds),
-            "bug_detected": sum(1 for p in preds if p.has_bug),
-            "clean": sum(1 for p in preds if not p.has_bug),
-        }
-
-        # Check if video result should be included
-        video_result = None
-        include_video = request.args.get("include_video", "false").lower() == "true"
-        if include_video:
-            # This user's own most recent video analysis (never another user's).
-            latest_video = (
-                Prediction.query.filter_by(user_id=user_id, media_type="video")
-                .filter(Prediction.video_frames_json.isnot(None))
-                .order_by(Prediction.timestamp.desc())
-                .first()
+        images = []
+        if report_type in {"all", "image"}:
+            rows = (
+                Prediction.query.filter_by(user_id=user_id, media_type="image")
+                .order_by(Prediction.timestamp.desc(), Prediction.id.desc())
+                .limit(100)
+                .all()
             )
-            if latest_video:
+            for row in rows:
+                item = row.to_dict()
+                thumb = _thumbnail_path(row.id)
+                item["thumbnail_path"] = str(thumb) if thumb.exists() else None
+                images.append(item)
+
+        video_result = None
+        video_id = request.args.get("video_id", "").strip()
+        include_video = (
+            report_type == "video"
+            or bool(video_id)
+            or (
+                report_type == "all"
+                and request.args.get("include_video", "false").lower() == "true"
+            )
+        )
+        if include_video:
+            # Only this user's own videos: the one asked for, else the latest.
+            videos = Prediction.query.filter_by(user_id=user_id, media_type="video").filter(
+                Prediction.video_frames_json.isnot(None)
+            )
+            if video_id:
+                raw = video_id.removeprefix("pred_")
+                video = videos.filter_by(id=int(raw)).first() if raw.isdigit() else None
+                if video is None:
+                    return jsonify({"error": "Video analysis not found"}), 404
+            else:
+                video = videos.order_by(Prediction.timestamp.desc()).first()
+            if video:
+                summary = json.loads(video.video_summary_json)
+                keyframes = {}
+                for number in range(1, len(summary.get("keyframes", [])) + 1):
+                    path = _keyframe_path(video.id, number)
+                    if path.exists():
+                        keyframes[number] = str(path)
                 video_result = {
-                    **json.loads(latest_video.video_summary_json),
-                    "frames": json.loads(latest_video.video_frames_json),
+                    **summary,
+                    "frames": json.loads(video.video_frames_json),
+                    "id": video.to_dict()["id"],
+                    "filename": video.filename,
+                    "confidence_threshold": video.confidence_threshold,
+                    "timestamp": video.timestamp.isoformat() if video.timestamp else None,
+                    "keyframe_paths": keyframes,
                 }
 
+        metrics_body = _model_metrics()
+        model_info = {
+            "name": Path(state.weights_path).parent.parent.name,
+            "precision": metrics_body.get("precision", 0),
+            "recall": metrics_body.get("recall", 0),
+            "mAP50": metrics_body.get("mAP50", 0),
+            "mAP50_95": metrics_body.get("mAP50_95", 0),
+        }
+        now = datetime.now()
         pdf_bytes = generate_report(
-            predictions=[p.to_dict() for p in preds],
+            predictions=images,
             user_name=user.name if user else "QA Tester",
-            stats=stats_data,
             video_result=video_result,
             lang=request.args.get("lang", "fr"),
+            report_type=report_type,
+            model_info=model_info,
+            report_id=f"BSQ-{now:%Y%m%d-%H%M%S}-U{user_id}",
         )
 
         return send_file(
             io.BytesIO(pdf_bytes),
             mimetype="application/pdf",
             as_attachment=True,
-            download_name=f"bugsight_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+            download_name=f"bugsight_report_{report_type}_{now:%Y%m%d_%H%M%S}.pdf",
         )
 
     app.config["state"] = state

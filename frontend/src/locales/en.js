@@ -34,6 +34,16 @@ export default {
   'app.predictionFailed': 'Prediction failed',
   'app.reportFailed': 'Failed to generate report',
 
+  'report.images': 'Image report',
+  'report.imagesHint': 'Summary, bug cards with captures, appendix',
+  'report.full': 'Full report',
+  'report.fullHint': 'Images and latest video, in separate parts',
+  'report.videoSection': 'Video report',
+  'report.loadingVideos': 'Loading videos…',
+  'report.noVideos': 'No video analyzed yet',
+  'report.withBugs': 'Bugs detected',
+  'report.clean': 'No bug',
+
   'login.topbar': 'BUGSIGHT QA / AUTHENTICATION',
   'login.tagline': 'Intelligent game bug detection',
   'login.lampOff': 'Turn the lamp off',

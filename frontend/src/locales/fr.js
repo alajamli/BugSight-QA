@@ -33,6 +33,16 @@ export default {
   'app.predictionFailed': 'L’analyse a échoué',
   'app.reportFailed': 'Impossible de générer le rapport',
 
+  'report.images': 'Rapport images',
+  'report.imagesHint': 'Synthèse, fiches de bug avec captures, annexe',
+  'report.full': 'Rapport complet',
+  'report.fullHint': 'Images et dernière vidéo, en parties séparées',
+  'report.videoSection': 'Rapport vidéo',
+  'report.loadingVideos': 'Chargement des vidéos…',
+  'report.noVideos': 'Aucune vidéo analysée pour l’instant',
+  'report.withBugs': 'Bugs détectés',
+  'report.clean': 'Aucun bug',
+
   'login.topbar': 'BUGSIGHT QA / AUTHENTIFICATION',
   'login.tagline': 'Détection intelligente de bugs de jeux',
   'login.lampOff': 'Éteindre la lampe',
